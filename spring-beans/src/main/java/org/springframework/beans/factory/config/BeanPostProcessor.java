@@ -54,6 +54,33 @@ import org.springframework.lang.Nullable;
  * @see DestructionAwareBeanPostProcessor
  * @see ConfigurableBeanFactory#addBeanPostProcessor
  * @see BeanFactoryPostProcessor
+ *
+ * BeanPostProcessor是Spring框架提供的一个扩展类点，叫做bean后置器(其中一个一共5个，下面列举的类都属于这一个类别的扩展点)
+ * 通过实现BeanPostProcessor接口，程序员就可以干预bean实例化的过程，从而减轻beanFactory的负担
+ * 这个接口可以设置多个，形成一个列表，然后依次执行。！！注意！！凡是实现的全部都会执行一遍
+ * （但是Spring默认的BeanPostProcessor怎么办？Spring自己会set）
+ * 比如AOP就是在Bean实例化期间，将切面逻辑植入Bean治理中的
+ * 也正是通过BeanPostProcessor，Spring把AOP，动态代理，IOC容器建立起了联系
+ * 由Spring提供的默认的PostProcessor有很多，比如
+ * 1. ApplicationContextAwareProcessor (简称ACAP)
+ *		ACAP后置处理器的作用是：当应用程序定义的Bean实现ApplicationContextAwareProcessor接口时注入ApplicationContext对象
+ * 2. InitDestroyAnnotationBeanPostProcessor
+ * 		用来处理自定义的初始化方法和销毁方法。
+ * 		我们知道Spring有3中自定义初始化和销毁的方法：
+ * 		a.通过@Bean指定init-method和destroy-method属性
+ * 		b.通过实现InitializingBean接口和实现DisposiableBean接口
+ * 		c.通过加上@PostConstract和@PreDestroy注解
+ * 		之所以这三种方法都可以实现回调，就是因为	InitDestroyAnnotationBeanPostProcessor做了处理
+ * 	3. InstantiationAwareBeanPostProcessor
+ * 	4. CommonAnnotationBeanPostProcessor
+ * 	5. AutowiredAnnotationBeanPostProcessor
+ * 	6. RequireAnnotationBeanPostProcessor
+ * 	7. BeanValidationPostProcessor
+ * 	8. AbstractAutoProxyCreator
+ * 	等等
+ *
+ *
+ * 	第二个扩展点BeanFactoryPostProcessor，bean工厂后置器
  */
 public interface BeanPostProcessor {
 
@@ -63,12 +90,16 @@ public interface BeanPostProcessor {
 	 * or a custom init-method). The bean will already be populated with property values.
 	 * The returned bean instance may be a wrapper around the original.
 	 * <p>The default implementation returns the given {@code bean} as-is.
-	 * @param bean the new bean instance
+	 * @param bean the new bean instance 这个参数bean就是原始对象
 	 * @param beanName the name of the bean
 	 * @return the bean instance to use, either the original or a wrapped one;
 	 * if {@code null}, no subsequent BeanPostProcessors will be invoked
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet
+	 *
+	 * BeforeInitialization顾名思义：在bean的初始化之前执行
+	 * 这个参数bean就是原始对象
+	 *
 	 */
 	@Nullable
 	default Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -88,13 +119,16 @@ public interface BeanPostProcessor {
 	 * {@link InstantiationAwareBeanPostProcessor#postProcessBeforeInstantiation} method,
 	 * in contrast to all other {@code BeanPostProcessor} callbacks.
 	 * <p>The default implementation returns the given {@code bean} as-is.
-	 * @param bean the new bean instance
+	 * @param bean the new bean instance       这个参数bean就是原始对象
 	 * @param beanName the name of the bean
 	 * @return the bean instance to use, either the original or a wrapped one;
 	 * if {@code null}, no subsequent BeanPostProcessors will be invoked
 	 * @throws org.springframework.beans.BeansException in case of errors
 	 * @see org.springframework.beans.factory.InitializingBean#afterPropertiesSet
 	 * @see org.springframework.beans.factory.FactoryBean
+	 *
+	 * AfterInitialization顾名思义：在bean的初始化之后执行。
+	 * 这个参数bean就是原始对象
 	 */
 	@Nullable
 	default Object postProcessAfterInitialization(Object bean, String beanName) throws BeansException {

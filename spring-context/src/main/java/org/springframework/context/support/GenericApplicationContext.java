@@ -319,7 +319,8 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	@Override
 	public void registerBeanDefinition(String beanName, BeanDefinition beanDefinition)
 			throws BeanDefinitionStoreException {
-
+		//空壳方法，接着往里走DefaultListableBeanFactory.registerBeanDefinition()
+		//但是DefaultListableBeanFactory beanFactory非常重要，Spring中所有的Bean都是通过这个工厂生成的Bean
 		this.beanFactory.registerBeanDefinition(beanName, beanDefinition);
 	}
 

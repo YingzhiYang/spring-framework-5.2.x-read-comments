@@ -133,6 +133,7 @@ public class AnnotatedBeanDefinitionReader {
 	 * e.g. {@link Configuration @Configuration} classes
 	 */
 	public void register(Class<?>... componentClasses) {
+		//循环注册传进来的bean
 		for (Class<?> componentClass : componentClasses) {
 			registerBean(componentClass);
 		}
@@ -144,6 +145,7 @@ public class AnnotatedBeanDefinitionReader {
 	 * @param beanClass the class of the bean
 	 */
 	public void registerBean(Class<?> beanClass) {
+		//起作用的是doRegisterBean()
 		doRegisterBean(beanClass, null, null, null, null);
 	}
 
@@ -250,38 +252,72 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable Class<? extends Annotation>[] qualifiers, @Nullable Supplier<T> supplier,
 			@Nullable BeanDefinitionCustomizer[] customizers) {
 
+		/**
+		 * 根据指定的bean创建一个AnnotatedGenericBeanDefinition
+		 * 这个类是一个数据解构，包含了类的一些元信息，比如scope，lazy等等
+		 */
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
+		/**
+		 * 判断这个类是否需要跳过解析
+		 * 通过代码可知spring判断是否跳过解析，主要通过判断有没有加注解
+		 */
 		if (this.conditionEvaluator.shouldSkip(abd.getMetadata())) {
 			return;
 		}
 
 		abd.setInstanceSupplier(supplier);
+		//得到类的作用域
 		ScopeMetadata scopeMetadata = this.scopeMetadataResolver.resolveScopeMetadata(abd);
+		//set类的作用域给AnnotatedGenericBeanDefinition
 		abd.setScope(scopeMetadata.getScopeName());
+		//生成类的名字
 		String beanName = (name != null ? name : this.beanNameGenerator.generateBeanName(abd, this.registry));
 
+		/**
+		 * 处理类当中的通用注解
+		 * 看下面if主要处理 Lazy，Primary，DependsOn，Role，Description
+		 * 处理完成以后，把类上的上述信息放到AnnotatedGenericBeanDefinition里面
+		 */
 		AnnotationConfigUtils.processCommonDefinitionAnnotations(abd);
+		/**
+		 * 如果在容器注册注解Bean定义时，使用了额外的限定符注解则解析
+		 * 因为变量qualifiers是一个Annotation的数组，不仅仅存放@Qualifier，也可能放@Scope等等
+		 * 因此这里使用了一个for循环去找数组里是否有@Primary和@Lazy
+		 * ！！！！但是要注意，这个qualifiers是传递进来的，因此大多数时候为null，这个if不会走！！！！！
+		 * 大多数时候注解是通过上面processCommonDefinitionAnnotations(abd)方法拿到的
+		 */
 		if (qualifiers != null) {
 			for (Class<? extends Annotation> qualifier : qualifiers) {
+				//如果加了@Primary注解，则设置首选为true
 				if (Primary.class == qualifier) {
 					abd.setPrimary(true);
-				}
+				}//懒加载，设置为true
 				else if (Lazy.class == qualifier) {
 					abd.setLazyInit(true);
 				}
 				else {
+					//如果不是上面两个，则给该Bean添加一个根据名字自动装配的限定符
 					abd.addQualifier(new AutowireCandidateQualifier(qualifier));
 				}
 			}
 		}
+		//处理自定义注解
 		if (customizers != null) {
 			for (BeanDefinitionCustomizer customizer : customizers) {
 				customizer.customize(abd);
 			}
 		}
-
+		/**
+		 * BeanDefinitionHolder也是一个数据解构，可以理解为一个加强型的BeanDefinition
+		 * 或者一个map<BeanDefinition,Name>
+		 */
 		BeanDefinitionHolder definitionHolder = new BeanDefinitionHolder(abd, beanName);
+		//代理模型和web有关
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
+		/**
+		 * 把BeanDefinitionHolder数据解构注册给registry，怎么注册的点进去
+		 *
+		 */
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}
 

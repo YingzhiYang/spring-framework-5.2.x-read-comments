@@ -58,6 +58,15 @@ import org.springframework.beans.BeansException;
  * @since 06.07.2003
  * @see BeanPostProcessor
  * @see PropertyResourceConfigurer
+ *
+ * Spring扩展点之一，Spring工厂的后置器
+ * 实现该接口，可以在Spring的bean创建之前修改bean的定义属性
+ * Spring允许BeanFactoryPostProcessor在容器实例化任何其他bean之前读取配置元数据
+ * 应可以根据需要进行修改，例如可以把bean的scope从singleton修改为prototype，也可以修改property的值
+ * 可以同时配置多了BeanFactoryPostProcessor，并通过order属性赖工之各个BeanFactoryPostProcessor的执行顺序
+ * BeanFactoryPostProcessor是Spring容器加载了bean的定义文件后，在bean实例化之前执行的
+ *
+ *
  */
 @FunctionalInterface
 public interface BeanFactoryPostProcessor {

@@ -231,6 +231,7 @@ public abstract class AnnotationConfigUtils {
 	}
 
 	public static void processCommonDefinitionAnnotations(AnnotatedBeanDefinition abd) {
+		//继续进入，abd.getMetadata()拿出元数据
 		processCommonDefinitionAnnotations(abd, abd.getMetadata());
 	}
 

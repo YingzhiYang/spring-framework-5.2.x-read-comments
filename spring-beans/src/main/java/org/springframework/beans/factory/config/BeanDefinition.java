@@ -23,6 +23,8 @@ import org.springframework.core.ResolvableType;
 import org.springframework.lang.Nullable;
 
 /**
+ *
+ * Spring 中用来描述bean的一个接口
  * A BeanDefinition describes a bean instance, which has property values,
  * constructor argument values, and further information supplied by
  * concrete implementations.
@@ -41,6 +43,7 @@ import org.springframework.lang.Nullable;
 public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 
 	/**
+	 * 单例模式作用域的作用标识符：singleton
 	 * Scope identifier for the standard singleton scope: {@value}.
 	 * <p>Note that extended bean factories might support further scopes.
 	 * @see #setScope
@@ -49,6 +52,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	String SCOPE_SINGLETON = ConfigurableBeanFactory.SCOPE_SINGLETON;
 
 	/**
+	 * 原型模式作用域的作用标识符：prototype
 	 * Scope identifier for the standard prototype scope: {@value}.
 	 * <p>Note that extended bean factories might support further scopes.
 	 * @see #setScope
@@ -71,6 +75,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * of when looking more closely at a particular
 	 * {@link org.springframework.beans.factory.parsing.ComponentDefinition},
 	 * but not when looking at the overall configuration of an application.
+	 * ROLE_SUPPORT = 1意思是，这个bean是用户创建的，从配置文件中定义来的
 	 */
 	int ROLE_SUPPORT = 1;
 
@@ -79,6 +84,7 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 	 * entirely background role and has no relevance to the end-user. This hint is
 	 * used when registering beans that are completely part of the internal workings
 	 * of a {@link org.springframework.beans.factory.parsing.ComponentDefinition}.
+	 * ROLE_INFRASTRUCTURE = 2是说：这个bean是Spring自己带的，和用户没有关系
 	 */
 	int ROLE_INFRASTRUCTURE = 2;
 
@@ -87,11 +93,13 @@ public interface BeanDefinition extends AttributeAccessor, BeanMetadataElement {
 
 	/**
 	 * Set the name of the parent definition of this bean definition, if any.
+	 * 如果有父类，就用这个方法set
 	 */
 	void setParentName(@Nullable String parentName);
 
 	/**
 	 * Return the name of the parent definition of this bean definition, if any.
+	 * 如果有父类，get父类
 	 */
 	@Nullable
 	String getParentName();

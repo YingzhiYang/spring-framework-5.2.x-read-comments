@@ -517,19 +517,25 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	public void refresh() throws BeansException, IllegalStateException {
 		synchronized (this.startupShutdownMonitor) {
 			// Prepare this context for refreshing.
+			//准备工作，包括设置启动时间，是否激活标识位，初始化属性源配置(property source)
 			prepareRefresh();
 
 			// Tell the subclass to refresh the internal bean factory.
+			// 这里获取的是一个DefaultListableBeanFactory的实例也就是初始化一个bean工厂
+			//！！！！！SpringBean的声明周期，从这行代码开始！！！！！！
 			ConfigurableListableBeanFactory beanFactory = obtainFreshBeanFactory();
 
 			// Prepare the bean factory for use in this context.
+			//重点方法
 			prepareBeanFactory(beanFactory);
 
 			try {
 				// Allows post-processing of the bean factory in context subclasses.
+				//这里面也是什么都没有
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
+				//设置执行自定义的ProcessorBeanFactory
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
@@ -598,6 +604,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize any placeholder property sources in the context environment.
+		// 此方法为空，里面什么也没有，可能未来的版本会有
 		initPropertySources();
 
 		// Validate that all properties marked as required are resolvable:
@@ -636,20 +643,36 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected ConfigurableListableBeanFactory obtainFreshBeanFactory() {
 		refreshBeanFactory();
+		//getBeanFactory()拿到DefaultListableBeanFactory实例
 		return getBeanFactory();
 	}
 
 	/**
+	 * 配置其标准特征比如上下文的类加载器ClassLoader和Post-processor的回调
 	 * Configure the factory's standard context characteristics,
 	 * such as the context's ClassLoader and post-processors.
 	 * @param beanFactory the BeanFactory to configure
+	 * beanFactory就是拿到的DefaultListableBeanFactory实例
+	 *
 	 */
 	protected void prepareBeanFactory(ConfigurableListableBeanFactory beanFactory) {
 		// Tell the internal bean factory to use the context's class loader etc.
 		beanFactory.setBeanClassLoader(getClassLoader());
+		//bean的表达式解释器
 		beanFactory.setBeanExpressionResolver(new StandardBeanExpressionResolver(beanFactory.getBeanClassLoader()));
+		//注册属性编辑器
 		beanFactory.addPropertyEditorRegistrar(new ResourceEditorRegistrar(this, getEnvironment()));
 
+
+		/**
+		 * Configure the bean factory with context callbacks.
+		 * 配置bean工厂对于上下文的回调
+		 * !!!!!!Spring中最核心的地方!!!!!!
+		 * 问题：在Spring中如果想要扩展Spring Bean有几种方法(Spring Bean的扩展有哪些)
+		 * 进入发现只是往List<BeanPostProcessor>这里list里面添加了ApplicationContextAwareProcessor类
+		 * 所以这个ApplicationContextAwareProcessor类是做什么的就至关重要，它叫做后置处理器，点进去。
+		 *	这行代码的作用就是添加一个后置管理器。这个管理器就是管理Spring自己的管理器。
+		 */
 		// Configure the bean factory with context callbacks.
 		beanFactory.addBeanPostProcessor(new ApplicationContextAwareProcessor(this));
 		beanFactory.ignoreDependencyInterface(EnvironmentAware.class);

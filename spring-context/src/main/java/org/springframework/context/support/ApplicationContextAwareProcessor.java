@@ -58,6 +58,8 @@ import org.springframework.util.StringValueResolver;
  * @see org.springframework.context.MessageSourceAware
  * @see org.springframework.context.ApplicationContextAware
  * @see org.springframework.context.support.AbstractApplicationContext#refresh()
+ *
+ *
  */
 class ApplicationContextAwareProcessor implements BeanPostProcessor {
 
@@ -68,6 +70,9 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 
 	/**
 	 * Create a new ApplicationContextAwareProcessor for the given context.
+	 * 这类实现了BeanPostProcessor，所以先去BeanPostProcessor里面查看
+	 * 查看以后发现其实要实现的就两个方法一个after一个before，但是因为接口里已经default了，所以after这里已经没有了。
+	 * 只有before：postProcessBeforeInitialization，和一个自己的方法invokeAwareInterfaces
 	 */
 	public ApplicationContextAwareProcessor(ConfigurableApplicationContext applicationContext) {
 		this.applicationContext = applicationContext;
@@ -75,6 +80,13 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 	}
 
 
+	/**
+	 * 先看before干了啥
+	 * @param bean the new bean instance 这个参数bean就是原始对象
+	 * @param beanName the name of the bean
+	 * @return
+	 * @throws BeansException
+	 */
 	@Override
 	@Nullable
 	public Object postProcessBeforeInitialization(Object bean, String beanName) throws BeansException {
@@ -83,7 +95,7 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 				bean instanceof MessageSourceAware || bean instanceof ApplicationContextAware)){
 			return bean;
 		}
-
+		//实例化这个对象，然后调用了invokeAwareInterfaces(bean);
 		AccessControlContext acc = null;
 
 		if (System.getSecurityManager() != null) {
@@ -97,13 +109,17 @@ class ApplicationContextAwareProcessor implements BeanPostProcessor {
 			}, acc);
 		}
 		else {
+			//进入这里查看，直接到下面
 			invokeAwareInterfaces(bean);
 		}
 
 		return bean;
 	}
 
+	//没错就是这里
 	private void invokeAwareInterfaces(Object bean) {
+		//下面的这些类都是可以用自己的代码实现这些接口，并用set方法传递进来的这些applicationContext的
+		// 从名字上也可以看出这些都是在激活接口
 		if (bean instanceof EnvironmentAware) {
 			((EnvironmentAware) bean).setEnvironment(this.applicationContext.getEnvironment());
 		}

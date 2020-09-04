@@ -53,17 +53,34 @@ import org.springframework.util.Assert;
  */
 public class AnnotationConfigApplicationContext extends GenericApplicationContext implements AnnotationConfigRegistry {
 
+	/**
+	 * 这是一个Reader，也就是读取器
+	 * 从名字上看读取的是一个被加了注解的bean，这个类是在构造方法里实现的
+	 */
 	private final AnnotatedBeanDefinitionReader reader;
 
+	/**
+	 * Scanner，扫描器，扫描所有加了注解的bean
+	 * 也是在构造方法里实现的
+	 */
 	private final ClassPathBeanDefinitionScanner scanner;
 
 
 	/**
+	 * 初始化一个bean的扫描器
+	 * 默认的构造方法，如果直接调用这个默认的构造方法，需要接着调用register()方法
+	 * 	去注册配置类(也就是被@Configuration注解的类)，并调用refresh()方法刷新容器
+	 * 	出发容器对注解的bean的载入，解析，实例化的过程。
 	 * Create a new AnnotationConfigApplicationContext that needs to be populated
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
+		//创建一个读取器去读取被注解的bean定义，有了这个reader就能读取被加了注解的类
+		//BeanDefinition是什么，我们知道java中的类用Class类去描述，里面有类名之类的。
+		// 类似的BeanDefinition就是Spring中用来定义并描述Bean的，本质上和Class一样。
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+
+		//扫描器
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -78,14 +95,21 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	}
 
 	/**
+	 * 这个构造方法需要传入一个被javaconfig注解了的配置类
+	 * 然后会把这个被注解了@Configuration的的类通过注解器读取后继而解析
 	 * Create a new AnnotationConfigApplicationContext, deriving bean definitions
 	 * from the given component classes and automatically refreshing the context.
 	 * @param componentClasses one or more component classes &mdash; for example,
 	 * {@link Configuration @Configuration} classes
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
+		//这里因为有父类，因此会先调用父类的构造方法，然后在调用自己的构造方法
+		//调用自己的构造方法，做了一个reader和一个scanner
 		this();
+		//目前来说componentClasses=AppConfig.class，register方法把
+		// 我们交给Spring管理的bean构建了一个map<BeanName, BeanDefinition>和一个list<BeanName>
 		register(componentClasses);
+		//初始化Spring的环境
 		refresh();
 	}
 
@@ -148,6 +172,13 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	//---------------------------------------------------------------------
 
 	/**
+	 * 注册单个bean给容器
+	 * 比如有个新加的类可以用这个方法
+	 * 但是注册只有需要手动调用refresh方法去出发容器解析注解
+	 *
+	 * 注册方法有两个作用
+	 * 1.可以注册配置类
+	 * 2.可以单独注册一个bean，或者多个bean，为什么能这么做？点进去有个for循环
 	 * Register one or more component classes to be processed.
 	 * <p>Note that {@link #refresh()} must be called in order for the context
 	 * to fully process the new classes.
