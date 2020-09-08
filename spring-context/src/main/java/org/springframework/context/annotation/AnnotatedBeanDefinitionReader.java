@@ -66,6 +66,11 @@ public class AnnotatedBeanDefinitionReader {
 	 * in the form of a {@code BeanDefinitionRegistry}
 	 * @see #AnnotatedBeanDefinitionReader(BeanDefinitionRegistry, Environment)
 	 * @see #setEnvironment(Environment)
+	 * 这里的BeanDefinitionRegistry registry是通过AnnotationConfigApplicationContext的构造方法中传递来的this
+	 * 由此说明AnnotationConfigApplicationContext是一个BeanDefinitation类型的类，其实是它的父类GenicXXXX实现了这个Resgistry
+	 * BeanDefinitionRegistry顾名思义就是类定义注册器
+	 * 用来把被reader转换后的BeanDefination放到map中。
+	 * 继续进入，里面调用的构造方法this
 	 */
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry) {
 		this(registry, getOrCreateEnvironment(registry));
@@ -79,12 +84,16 @@ public class AnnotatedBeanDefinitionReader {
 	 * @param environment the {@code Environment} to use when evaluating bean definition
 	 * profiles.
 	 * @since 3.1
+	 *
 	 */
 	public AnnotatedBeanDefinitionReader(BeanDefinitionRegistry registry, Environment environment) {
 		Assert.notNull(registry, "BeanDefinitionRegistry must not be null");
 		Assert.notNull(environment, "Environment must not be null");
+		//自己存一下内容
 		this.registry = registry;
 		this.conditionEvaluator = new ConditionEvaluator(registry, environment, null);
+		//这里还是什么都没有干，反而把任务包给了registerAnnotationConfigProcessors静态方法，接着进入
+		// 这里的作用就是把registry这里面的内容传递给Reader
 		AnnotationConfigUtils.registerAnnotationConfigProcessors(this.registry);
 	}
 
@@ -253,7 +262,7 @@ public class AnnotatedBeanDefinitionReader {
 			@Nullable BeanDefinitionCustomizer[] customizers) {
 
 		/**
-		 * 根据指定的bean创建一个AnnotatedGenericBeanDefinition
+		 * 根据指定的bean创建一个AnnotatedGenericBeanDefinition，换句话说就是通过这个构造方法，把一个类变成BeanDefinition
 		 * 这个类是一个数据解构，包含了类的一些元信息，比如scope，lazy等等
 		 */
 		AnnotatedGenericBeanDefinition abd = new AnnotatedGenericBeanDefinition(beanClass);
@@ -316,7 +325,7 @@ public class AnnotatedBeanDefinitionReader {
 		definitionHolder = AnnotationConfigUtils.applyScopedProxyMode(scopeMetadata, definitionHolder, this.registry);
 		/**
 		 * 把BeanDefinitionHolder数据解构注册给registry，怎么注册的点进去
-		 *
+		 * 最终发现所有BeanDefinition的转换都是通过DefaultListableBeanFactory.registerBeanDefinition()方法做的
 		 */
 		BeanDefinitionReaderUtils.registerBeanDefinition(definitionHolder, this.registry);
 	}

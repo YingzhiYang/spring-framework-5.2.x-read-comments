@@ -75,12 +75,18 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 * through {@link #register} calls and then manually {@linkplain #refresh refreshed}.
 	 */
 	public AnnotationConfigApplicationContext() {
-		//创建一个读取器去读取被注解的bean定义，有了这个reader就能读取被加了注解的类
-		//BeanDefinition是什么，我们知道java中的类用Class类去描述，里面有类名之类的。
-		// 类似的BeanDefinition就是Spring中用来定义并描述Bean的，本质上和Class一样。
+		/**
+		 * 读取器：创建一个读取器去读取被注解的bean定义(BeanDefinition)，有了这个reader就能读取被加了注解的类
+		 * BeanDefinition是什么，我们知道java中的类用Class类去描述，里面有类名，属性列表，方法列表，注解之类的。
+		 * 类似的BeanDefinition就是Spring中用来定义并描述Bean的，本质上和Class一样。
+		 * 我们手写的一个bean，就是通过这样一个reader，被转换成了BeanDefinition。（还可以通过RootBeanDefinition的构造方法去转换）
+		 * 为将来放入map<Name,BeanDefinition>做准备，！！！但是！！！注意这个对象(Annotated)定义的就是只能读取加了注解的
+		 * 这个构造方法参数是BeanDefinitionRegistry，但是传入的是this(AnnotationConfigApplicationContext)
+		 * 因此可以说AnnotationConfigApplicationContext也是一个注册器，因为它的父类其实是实现了BeanDefinitionRegistry
+		 * BeanDefinitionRegistry的作用就是reader转换Bean为BeanDefinition后放到map中去
+		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
-
-		//扫描器
+		//扫描器：能够扫描类(也能扫描包)，并且转换成为一个BeanDefinition
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}
 
@@ -104,6 +110,8 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 	 */
 	public AnnotationConfigApplicationContext(Class<?>... componentClasses) {
 		//这里因为有父类，因此会先调用父类的构造方法，然后在调用自己的构造方法
+		// 父类方法调用完成以后DefaultListableBeanFactory这个bean工厂就会被初始化出来，
+		// 父类构造方法也只做了这样的一件事情，鉴于这个工厂如此的重要，这一步也非常的重要
 		//调用自己的构造方法，做了一个reader和一个scanner
 		this();
 		//目前来说componentClasses=AppConfig.class，register方法把

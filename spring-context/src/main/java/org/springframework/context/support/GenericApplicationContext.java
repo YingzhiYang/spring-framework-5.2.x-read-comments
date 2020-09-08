@@ -107,8 +107,15 @@ public class GenericApplicationContext extends AbstractApplicationContext implem
 	 * Create a new GenericApplicationContext.
 	 * @see #registerBeanDefinition
 	 * @see #refresh
+	 * 实例化一个工厂DefaultListableBeanFactory，这里就是下面的this()首先启动的
 	 */
 	public GenericApplicationContext() {
+		/**
+		 * 这里初始化了几个很关键的属性，如果没有这些属性后面无法进行
+		 * dependencyComparator 用来做排序的，工厂中用来处理实例化的顺序
+		 * beanDefinitionMap	放的是bean描述的map<BeanName, BeanDefinition>
+		 * beanDefinitionNames	放的是bean的名字用来检索bean的，List<BeanName>
+		 */
 		this.beanFactory = new DefaultListableBeanFactory();
 	}
 

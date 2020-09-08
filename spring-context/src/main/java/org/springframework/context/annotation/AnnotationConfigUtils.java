@@ -134,6 +134,8 @@ public abstract class AnnotationConfigUtils {
 	 * @param registry the registry to operate on
 	 */
 	public static void registerAnnotationConfigProcessors(BeanDefinitionRegistry registry) {
+		//又是个空壳方法，继续走到自己的重载方法里，就在下面
+		// Spring里面这种空壳方法很多，只能说可能是为了以后扩展用的，否则怎么都无法理解这样的废代码有何用处。
 		registerAnnotationConfigProcessors(registry, null);
 	}
 
@@ -148,25 +150,37 @@ public abstract class AnnotationConfigUtils {
 	public static Set<BeanDefinitionHolder> registerAnnotationConfigProcessors(
 			BeanDefinitionRegistry registry, @Nullable Object source) {
 
+		//给Bean工厂赋值，就是把registry内容注册进来
 		DefaultListableBeanFactory beanFactory = unwrapDefaultListableBeanFactory(registry);
+		//下面就开始这个Bean工厂的属性赋值
 		if (beanFactory != null) {
 			if (!(beanFactory.getDependencyComparator() instanceof AnnotationAwareOrderComparator)) {
+				//AnnotationAwareOrderComparator排序用的，主要解析@Order注解和@Priority注解
 				beanFactory.setDependencyComparator(AnnotationAwareOrderComparator.INSTANCE);
 			}
 			if (!(beanFactory.getAutowireCandidateResolver() instanceof ContextAnnotationAutowireCandidateResolver)) {
+				//ContextAnnotationAutowireCandidateResolver提供延迟加载的功能
 				beanFactory.setAutowireCandidateResolver(new ContextAnnotationAutowireCandidateResolver());
 			}
 		}
-
+		//这里声明一个holder还记得这个Holder吗，就只有BeanName，Aliases，BeanDefinition三个属性，这个对象的目的就是方便传参。
 		Set<BeanDefinitionHolder> beanDefs = new LinkedHashSet<>(8);
-
+		//BeanDeinitaion的注册，这里非常重要，因为下面注册的各个类型都是Spring各个功能类
+		// 这里每一个if都开始判断，目前位置我们的容器工厂中是否有下列常量
 		if (!registry.containsBeanDefinition(CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+			//需要注意的是ConfigurationClassPostProcessor的类型是BeanDefinitionRegistryPostProcessor
+			// 而BeanDefinitionRegistryPostProcessor中是实现BeanFactoryPostProcessor这个接口
+			// RootBeanDefinition是用来描述Spring内部的类的，这里就是使一个类变成一个BeanDefinition的类
 			RootBeanDefinition def = new RootBeanDefinition(ConfigurationClassPostProcessor.class);
 			def.setSource(source);
+			//添加到beanDefs这个set中，所以去看下registerPostProcessor方法干了啥
+			// 这个方法点进去就是往beanDefinitionMap这个map里注册一个相应的beanDefinition
 			beanDefs.add(registerPostProcessor(registry, def, CONFIGURATION_ANNOTATION_PROCESSOR_BEAN_NAME));
 		}
 
 		if (!registry.containsBeanDefinition(AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME)) {
+			//AutowiredAnnotationBeanPostProcessor实现了MergedBeanDefinitionPostProcessor
+			// 通过MergedBeanDefinitionPostProcessor最终实现了BeanFactoryPostProcessor接口
 			RootBeanDefinition def = new RootBeanDefinition(AutowiredAnnotationBeanPostProcessor.class);
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, AUTOWIRED_ANNOTATION_PROCESSOR_BEAN_NAME));
@@ -205,7 +219,7 @@ public abstract class AnnotationConfigUtils {
 			def.setSource(source);
 			beanDefs.add(registerPostProcessor(registry, def, EVENT_LISTENER_FACTORY_BEAN_NAME));
 		}
-
+		//把上面的类都注册完成，返回
 		return beanDefs;
 	}
 
@@ -213,6 +227,7 @@ public abstract class AnnotationConfigUtils {
 			BeanDefinitionRegistry registry, RootBeanDefinition definition, String beanName) {
 
 		definition.setRole(BeanDefinition.ROLE_INFRASTRUCTURE);
+		//把BeanDefinition方法容器map中
 		registry.registerBeanDefinition(beanName, definition);
 		return new BeanDefinitionHolder(definition, beanName);
 	}
