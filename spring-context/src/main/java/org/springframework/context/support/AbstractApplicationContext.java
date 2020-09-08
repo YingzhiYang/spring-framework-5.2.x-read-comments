@@ -702,7 +702,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 			// Set a temporary ClassLoader for type matching.
 			beanFactory.setTempClassLoader(new ContextTypeMatchClassLoader(beanFactory.getBeanClassLoader()));
 		}
-
+		//如果自定义的bean中没有名为“systemProperties”和“systemEnvironment”的bean，则注册这两个bean
+		// Key为“systemProperties”和“systemEnvironment”，Value为Map
+		// 这两个Bean就是一些系统配置和系统环境信息
 		// Register default environment beans.
 		if (!beanFactory.containsLocalBean(ENVIRONMENT_BEAN_NAME)) {
 			beanFactory.registerSingleton(ENVIRONMENT_BEAN_NAME, getEnvironment());
@@ -731,7 +733,8 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 * <p>Must be called before singleton instantiation.
 	 */
 	protected void invokeBeanFactoryPostProcessors(ConfigurableListableBeanFactory beanFactory) {
-		//getBeanFactoryPostProcessors()是获取的自定义的（就是程序员自己写的，并且没有交给spring管理，就是没有加上@Component）
+		//getBeanFactoryPostProcessors()是获取的自定义的（就是程序员自己写的，并且没有交给spring管理，就是没有加上@Component的FactoryPostProcessor）
+		// 其实就是说AnnotationConfigApplicationContext.addBeanFactoryPostProcessor(new class)这个方法传递进去的类
 		// 进入这个invokeBeanFactoryPostProcessors方法
 		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(beanFactory, getBeanFactoryPostProcessors());
 
