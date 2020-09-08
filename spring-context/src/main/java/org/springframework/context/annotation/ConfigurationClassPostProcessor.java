@@ -232,7 +232,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					"postProcessBeanFactory already called on this post-processor against " + registry);
 		}
 		this.registriesPostProcessed.add(registryId);
-
+		//真正操作的是这个方法
 		processConfigBeanDefinitions(registry);
 	}
 
@@ -263,17 +263,23 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	 * {@link Configuration} classes.
 	 */
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
+		//app提供的bean
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
+		//获取容器中注册的所有bean的名字
 		String[] candidateNames = registry.getBeanDefinitionNames();
 
 		for (String beanName : candidateNames) {
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			if (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != null) {
+				//如果发现这个属性不为null，则不用在处理直接往下走，这个属性就是在下面checkConfigurationClassCandidate()加的
+				//因为被加上了，就说明已经处理过了
 				if (logger.isDebugEnabled()) {
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
-			}
+			}//判断是否是Configuration类，其实就是把拿出来的所有BeanDefinition中有没有@Configuration注解
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
+				//把Configuration类添加进去，添加的是BeanDefinitionHolder，这个类已经变成一个托盘了，
+				// 好像就是为了往一个list中传递map解构用的
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
@@ -283,7 +289,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			return;
 		}
 
-		// Sort by previously determined @Order value, if applicable
+		// 排序根据@Order注解的顺序来的 Sort by previously determined @Order value, if applicable
 		configCandidates.sort((bd1, bd2) -> {
 			int i1 = ConfigurationClassUtils.getOrder(bd1.getBeanDefinition());
 			int i2 = ConfigurationClassUtils.getOrder(bd2.getBeanDefinition());
@@ -292,11 +298,17 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 
 		// Detect any custom bean name generation strategy supplied through the enclosing application context
 		SingletonBeanRegistry sbr = null;
+		/**
+		 * 如果BeanDefinitionRegistry是SingletonBeanRegistry的子类的话
+		 * 由于我们当前传入的是DefaultListableBeanFactory，而它是SingletonBeanRegistry的子类
+		 * 因此可以将registry强转为SingletonBeanRegistry
+		 */
 		if (registry instanceof SingletonBeanRegistry) {
 			sbr = (SingletonBeanRegistry) registry;
-			if (!this.localBeanNameGeneratorSet) {
+			if (!this.localBeanNameGeneratorSet) {//是否有自定义的BeanName生成器
 				BeanNameGenerator generator = (BeanNameGenerator) sbr.getSingleton(
 						AnnotationConfigUtils.CONFIGURATION_BEAN_NAME_GENERATOR);
+				//如果有用用户自定义的名字生成器，否则用Spring默认的，一般来说不会有人自己写吧
 				if (generator != null) {
 					this.componentScanBeanNameGenerator = generator;
 					this.importBeanNameGenerator = generator;
@@ -309,13 +321,20 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		}
 
 		// Parse each @Configuration class
+		//实例化ConfigurationClassParser，为了解析哥哥配置类
 		ConfigurationClassParser parser = new ConfigurationClassParser(
 				this.metadataReaderFactory, this.problemReporter, this.environment,
 				this.resourceLoader, this.componentScanBeanNameGenerator, registry);
 
+		/**
+		 * 这里就把configCandidates这个list，转换为set处理了
+		 * 实例化两个set，candidates用于将之前加入的configCandidates进行去重，因为可能会有重复的配置类。
+		 * alreadyParsed用来判断是否进行过处理
+		 */
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
+			//扫描包，把上面的set传来解析
 			parser.parse(candidates);
 			parser.validate();
 
@@ -328,6 +347,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
+			//把扫描出来的bean对应的BeanDefinition放到factory的map中
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 

@@ -63,15 +63,25 @@ final class PostProcessorRegistrationDelegate {
 			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
-
+			//自定义的BeanFactoryPostProcessors
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
 							(BeanDefinitionRegistryPostProcessor) postProcessor;
 					registryProcessor.postProcessBeanDefinitionRegistry(registry);
+					//Spring定义并实现BeanFactoryPostProcessor的类，放到这里registryProcessors
 					registryProcessors.add(registryProcessor);
 				}
 				else {
+					//自己定义并实现BeanFactoryPostProcessor的类，放到这里regularPostProcessors
+					/**
+					 * 为什么这里要分开，因为BeanDefinitionRegistryPostProcessor和BeanFactoryPostProcessor虽然可以视为相等的，
+					 * 但是BeanDefinitionRegistryPostProcessor是后者的子类，有自己的方法，因此Spring将其分开。如果发现用户自己的
+					 * bean工厂后置处理器使用的是BeanFactoryPostProcessor接口实现的，就使用regularPostProcessors这个list的内容
+					 * 处理其中的方法。
+					 * 如果发现是BeanDefinitionRegistryPostProcessor这个接口实现的，就使用registryProcessor这个list的内容处理
+					 * 其中的方法。
+					 */
 					regularPostProcessors.add(postProcessor);
 				}
 			}
@@ -80,19 +90,37 @@ final class PostProcessorRegistrationDelegate {
 			// uninitialized to let the bean factory post-processors apply to them!
 			// Separate between BeanDefinitionRegistryPostProcessors that implement
 			// PriorityOrdered, Ordered, and the rest.
+			//这个List放的是Spring自己实现BeanDefinitionRegistryPostProcessor接口的对象
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
+			// 这个方法的作用是：对于匹配的类型，返回这个类型的名字。就是根据类型得到一个bean的名字。
+			// 这个type是指BeanDefinition中描述的当前类的class类型
 			String[] postProcessorNames =
 					beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
+			/**
+			 * 这里可以得到一个BeanFactoryPostProcessor以你为Spring默认在最开始自己注册的
+			 * Spring工厂需要有解析，扫描等等功能
+			 * 这些功能必须在Spring工厂初始化之前执行，要么在工厂最开始的时候，要么在初始化之中。
+			 * 就比如工厂开工必须要有机器，这步就是把机器拉进工厂。如果初始化后在执行就相当于，工厂要用了，要开工了却没机器。
+			 * 所以这里Spring在一开始就注册了一个BeanFactoryPostProcessor，用来插手SpringFactory的实例化过程。
+			 * 首次运行这里拿到的类则是ConfigurationClassPostProcessor，这是在之前Spring初始化Reader的时候被设置的类之一，
+			 * 而ConfigurationClassPostProcessor则实现了BeanDefinitionRegistryPostProcessor，因此会被拿出来
+			 *
+			 */
 			for (String ppName : postProcessorNames) {
+				//通过名字把这个BeanDefinition拿出来
 				if (beanFactory.isTypeMatch(ppName, PriorityOrdered.class)) {
+					//放到currentRegistryProcessors这个list中
 					currentRegistryProcessors.add(beanFactory.getBean(ppName, BeanDefinitionRegistryPostProcessor.class));
 					processedBeans.add(ppName);
 				}
 			}
+			//排序
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
+			//合并list，把自己实现的和Spring实现的BeanDefinitionRegistryPostProcessor合并一起处理
 			registryProcessors.addAll(currentRegistryProcessors);
+			//调用这个方法处理currentRegistryProcessors，进入
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			currentRegistryProcessors.clear();
 
@@ -276,7 +304,9 @@ final class PostProcessorRegistrationDelegate {
 	private static void invokeBeanDefinitionRegistryPostProcessors(
 			Collection<? extends BeanDefinitionRegistryPostProcessor> postProcessors, BeanDefinitionRegistry registry) {
 
+		//循环所有的BeanDefinitionRegistryPostProcessor，然后调用其中的postProcessBeanDefinitionRegistry()这个扩展方法，进入
 		for (BeanDefinitionRegistryPostProcessor postProcessor : postProcessors) {
+			//这里进入的是ConfigurationClassPostProcessor.postProcessBeanDefinitionRegistry(registry)
 			postProcessor.postProcessBeanDefinitionRegistry(registry);
 		}
 	}
