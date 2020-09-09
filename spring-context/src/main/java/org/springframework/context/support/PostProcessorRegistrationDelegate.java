@@ -120,7 +120,7 @@ final class PostProcessorRegistrationDelegate {
 			sortPostProcessors(currentRegistryProcessors, beanFactory);
 			//合并list，把自己实现的和Spring实现的BeanDefinitionRegistryPostProcessor合并一起处理
 			registryProcessors.addAll(currentRegistryProcessors);
-			//调用这个方法处理currentRegistryProcessors，进入
+			//调用这个方法处理currentRegistryProcessors，进入。registry这个参数是自定义的BeanFactoryPostProcessors
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
 			currentRegistryProcessors.clear();
 

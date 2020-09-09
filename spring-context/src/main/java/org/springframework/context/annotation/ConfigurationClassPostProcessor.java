@@ -267,8 +267,10 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
 		//获取容器中注册的所有bean的名字
 		String[] candidateNames = registry.getBeanDefinitionNames();
-
-		for (String beanName : candidateNames) {
+		//下面开始遍历解析candidateNames这个数组里面的名字对应的bean，其实这里会做的是找到@Configuration等等配置注解注册过的类，
+		// 然后解析这个类，也就是我们程序中的AppConfig.class。
+		// 怎么判断呢，所有要解析的注解都在下面循环中的checkConfigurationClassCandidate(...)方法里面可以找到
+		for (String beanName : candidateNames) { //这个循环就是要找哪个是要解析的类
 			BeanDefinition beanDef = registry.getBeanDefinition(beanName);
 			if (beanDef.getAttribute(ConfigurationClassUtils.CONFIGURATION_CLASS_ATTRIBUTE) != null) {
 				//如果发现这个属性不为null，则不用在处理直接往下走，这个属性就是在下面checkConfigurationClassCandidate()加的

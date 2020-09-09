@@ -100,7 +100,7 @@ abstract class ConfigurationClassUtils {
 		else if (beanDef instanceof AbstractBeanDefinition && ((AbstractBeanDefinition) beanDef).hasBeanClass()) {
 			// Check already loaded Class if present...
 			// since we possibly can't even load the class file for this Class.
-			// 如果BeanDefinition是AbstractBeanDefinition的实例，并且beanDef有beanClass的属性存在，
+			// 如果BeanDefinition是AbstractBeanDefinition的实例，就是说这类没有加注解，并且beanDef有beanClass的属性存在，
 			// 则实例化StandardAnnotationMetadata
 			Class<?> beanClass = ((AbstractBeanDefinition) beanDef).getBeanClass();
 			if (BeanFactoryPostProcessor.class.isAssignableFrom(beanClass) ||
@@ -124,12 +124,15 @@ abstract class ConfigurationClassUtils {
 				return false;
 			}
 		}
-		//首先拿到元数据信息
+		//首先拿到元数据信息中的Configuration名字
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
-		//判断是不是@Configuration注解里面有没有proxyBeanMethods这个参数
+		//判断是不是@Configuration注解，并且里面有没有proxyBeanMethods这个参数
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
-		}//判断这里bean是不是加了@Configuration注解
+		}//判断这里bean是不是加了@Configuration注解。
+		// 如果不是的话，是不是加了别的注解，比如@Component，@ComponentScan，@Imported，@ImportResource这些
+		// 要注意的是这里的||，如果判断config存在，也就是加了@Configuration注解后面的就不用判断了，这些会留给解析配置类的时候一起解析。
+		// Spring为什么要这样设计。估计是担心有人没有写@Configuration，直接写了别的，以防万一先给你解析了。
 		else if (config != null || isConfigurationCandidate(metadata)) {
 			//如果是，则为BeanDefinition设置configurationClass属性为LITE
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
@@ -161,6 +164,7 @@ abstract class ConfigurationClassUtils {
 		}
 
 		// Any of the typical annotations found?
+		// 这里面就是存的Component，ComponentScan，Imported，ImportResource这些注解
 		for (String indicator : candidateIndicators) {
 			if (metadata.isAnnotated(indicator)) {
 				return true;

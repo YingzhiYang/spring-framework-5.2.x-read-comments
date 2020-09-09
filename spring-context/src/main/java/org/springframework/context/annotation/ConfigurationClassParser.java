@@ -315,6 +315,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
+		//处理@Import
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
 
 		// Process any @ImportResource annotations
@@ -572,6 +573,7 @@ class ConfigurationClassParser {
 			this.importStack.push(configClass);
 			try {
 				for (SourceClass candidate : importCandidates) {
+					//判断并处理ImportSelector
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
@@ -589,7 +591,13 @@ class ConfigurationClassParser {
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames, exclusionFilter);
 							processImports(configClass, currentSourceClass, importSourceClasses, exclusionFilter, false);
 						}
-					}
+					}//判断并处理ImportBeanDefinitionRegistrar，能够动态添加bean，之所以能够做到这里，
+					// 是因为这个类把注册的map<BeanName,BeanDefinition>暴露出来了
+					// 这样做有什么好处呢？梳理下一个Class转化为BeanDefinition的方法
+					// register()方法	传入一个类	无法参与BeanDefinition的过程
+					// scan()方法		传入一个类	无法参与BeanDefinition的过程
+					// ImportBeanDefinitionRegistrar 参与BeanDefinition的过程
+					// Mybatis有一个@MapperScan的注解，其作用就是把一个接口变成一个对象，这个功能实现就是使用了这个类
 					else if (candidate.isAssignable(ImportBeanDefinitionRegistrar.class)) {
 						// Candidate class is an ImportBeanDefinitionRegistrar ->
 						// delegate to it to register additional bean definitions
@@ -599,7 +607,7 @@ class ConfigurationClassParser {
 										this.environment, this.resourceLoader, this.registry);
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
-					else {
+					else {//判断并处理普通类
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
 						this.importStack.registerImport(
