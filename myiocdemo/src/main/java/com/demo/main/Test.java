@@ -2,6 +2,7 @@ package com.demo.main;
 
 import com.demo.app.AppConfig;
 import com.demo.beanPostProcessor.MyBeanFactoryProcessor;
+import com.demo.dao.ImportTestDao;
 import com.demo.dao.IndexDao;
 import org.springframework.context.annotation.AnnotationConfigApplicationContext;
 
@@ -12,8 +13,11 @@ public class Test {
 
 		//自己添加一个BeanFactoryProcessor
 		// anno.addBeanFactoryPostProcessor(new MyBeanFactoryProcessor());
-		anno.refresh();
+		/*anno.refresh();
 		IndexDao dao=anno.getBean(IndexDao.class);
-		dao.query();
+		dao.query();*/
+		ImportTestDao importTestDao= (ImportTestDao) anno.getBean("importTestDao");
+		importTestDao.query();
+
 	}
 }
