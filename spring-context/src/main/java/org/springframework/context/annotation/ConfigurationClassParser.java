@@ -322,7 +322,7 @@ class ConfigurationClassParser {
 
 		// Process any @Import annotations
 		//处理@Import import 有三种情况
-		// import普通类
+		// Import普通类
 		// ImportSelector
 		// ImportBeanDefinitionRegistrar
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
