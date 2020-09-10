@@ -79,15 +79,18 @@ class ComponentScanAnnotationParser {
 	 * @return
 	 */
 	public Set<BeanDefinitionHolder> parse(AnnotationAttributes componentScan, final String declaringClass) {
+		//这里才是真正扫描包使用的scanner，AnnotationConfigApplicationContext构造方法里面的scanner就是为了外部调用scan()方法用的
 		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner(this.registry,
 				componentScan.getBoolean("useDefaultFilters"), this.environment, this.resourceLoader);
 
 		//下面就是@ComponentScan的各种参数的处理，一直到方法最后的doScan()方法
+		//这里扫描我们配置的包。看这里的BeanNameGenerator名字生成器，因为扫描出来的类需要放到我们的b-d-map中去，
+		// 这个里就是用来生成这个名字的。
 		Class<? extends BeanNameGenerator> generatorClass = componentScan.getClass("nameGenerator");
 		boolean useInheritedGenerator = (BeanNameGenerator.class == generatorClass);
 		scanner.setBeanNameGenerator(useInheritedGenerator ? this.beanNameGenerator :
 				BeanUtils.instantiateClass(generatorClass));
-
+		//web相关
 		ScopedProxyMode scopedProxyMode = componentScan.getEnum("scopedProxy");
 		if (scopedProxyMode != ScopedProxyMode.DEFAULT) {
 			scanner.setScopedProxyMode(scopedProxyMode);
@@ -99,6 +102,7 @@ class ComponentScanAnnotationParser {
 
 		scanner.setResourcePattern(componentScan.getString("resourcePattern"));
 
+		//遍历当中的过滤，如果配置了过滤器就在这里进行剔除
 		for (AnnotationAttributes filter : componentScan.getAnnotationArray("includeFilters")) {
 			for (TypeFilter typeFilter : typeFiltersFor(filter)) {
 				scanner.addIncludeFilter(typeFilter);
@@ -110,11 +114,12 @@ class ComponentScanAnnotationParser {
 			}
 		}
 
+		//懒加载
 		boolean lazyInit = componentScan.getBoolean("lazyInit");
-		if (lazyInit) {
+		if (lazyInit) { //默认都是false，如果不特别指明就不会走到这里，也就不会设置懒加载
 			scanner.getBeanDefinitionDefaults().setLazyInit(true);
 		}
-
+		//拿到所有包的名字
 		Set<String> basePackages = new LinkedHashSet<>();
 		String[] basePackagesArray = componentScan.getStringArray("basePackages");
 		for (String pkg : basePackagesArray) {
@@ -135,7 +140,7 @@ class ComponentScanAnnotationParser {
 				return declaringClass.equals(className);
 			}
 		});
-		//到这里
+		//到这里，这里就开始干正事儿了
 		return scanner.doScan(StringUtils.toStringArray(basePackages));
 	}
 

@@ -126,15 +126,19 @@ abstract class ConfigurationClassUtils {
 		}
 		//首先拿到元数据信息中的Configuration名字
 		Map<String, Object> config = metadata.getAnnotationAttributes(Configuration.class.getName());
-		//判断是不是@Configuration注解，并且里面有没有proxyBeanMethods这个参数
+		//判断是@Configuration注解，并且里面proxyBeanMethods是默认值，或者没有明写
 		if (config != null && !Boolean.FALSE.equals(config.get("proxyBeanMethods"))) {
+			//@Configuration的参数proxyBeanMethods==true(默认为true，也就是开启CGLIB)，
+			// 如果不配置这个参数proxyBeanMethods就是true，就设置为Full
+			// Full：也就代表Spring认为这是一个全注解的类
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_FULL);
-		}//判断这里bean是不是加了@Configuration注解。
+		}//判断这里bean是加了@Configuration注解。
 		// 如果不是的话，是不是加了别的注解，比如@Component，@ComponentScan，@Imported，@ImportResource这些
 		// 要注意的是这里的||，如果判断config存在，也就是加了@Configuration注解后面的就不用判断了，这些会留给解析配置类的时候一起解析。
 		// Spring为什么要这样设计。估计是担心有人没有写@Configuration，直接写了别的，以防万一先给你解析了。
 		else if (config != null || isConfigurationCandidate(metadata)) {
-			//如果是，则为BeanDefinition设置configurationClass属性为LITE
+			//如果判断加了后面四个注解，唯独没有@Configuration，则为BeanDefinition设置configurationClass属性为LITE
+			// Lite：Spring认为是一个部分注解类，这里是一个标识，以后会用
 			beanDef.setAttribute(CONFIGURATION_CLASS_ATTRIBUTE, CONFIGURATION_CLASS_LITE);
 		}
 		else {

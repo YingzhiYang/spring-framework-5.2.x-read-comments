@@ -276,7 +276,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 		Assert.notEmpty(basePackages, "At least one base package must be specified");
 		Set<BeanDefinitionHolder> beanDefinitions = new LinkedHashSet<>();
 		for (String basePackage : basePackages) {
-			//扫描beanPackage路径下的java文件并把其转化为BeanDefinition类型
+			//扫描beanPackage路径下的java文件并把其符合条件的转化为BeanDefinition类型，进入
 			Set<BeanDefinition> candidates = findCandidateComponents(basePackage);
 			for (BeanDefinition candidate : candidates) {
 				//解析Scope属性
@@ -285,13 +285,14 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 				String beanName = this.beanNameGenerator.generateBeanName(candidate, this.registry);
 				if (candidate instanceof AbstractBeanDefinition) {
 					//如果这个类是AbstractBeanDefinition的子类，
-					// 则为其设置默认值，比如lazy，init，destory等等
+					// 则为其填充默认值，比如lazy，init，destory等等
 					postProcessBeanDefinition((AbstractBeanDefinition) candidate, beanName);
 				}
 				if (candidate instanceof AnnotatedBeanDefinition) {
 					//检查并处理常用的注解
 					// 这里只要是指把常用注解的值设置到AnnotatedBeanDefinition当中
 					// 当前前提是这个类必须是AnnotatedBeanDefinition类型的，也就是加了注解的类
+					// 上个if是给每一个bean设置默认值，这里就是解析真正的注解上写的是什么
 					AnnotationConfigUtils.processCommonDefinitionAnnotations((AnnotatedBeanDefinition) candidate);
 				}
 				if (checkCandidate(beanName, candidate)) {
@@ -314,6 +315,7 @@ public class ClassPathBeanDefinitionScanner extends ClassPathScanningCandidateCo
 	 * @param beanName the generated bean name for the given bean
 	 */
 	protected void postProcessBeanDefinition(AbstractBeanDefinition beanDefinition, String beanName) {
+		//applyDefaults方法置默认值
 		beanDefinition.applyDefaults(this.beanDefinitionDefaults);
 		if (this.autowireCandidatePatterns != null) {
 			beanDefinition.setAutowireCandidate(PatternMatchUtils.simpleMatch(this.autowireCandidatePatterns, beanName));

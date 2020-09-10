@@ -172,6 +172,8 @@ class ConfigurationClassParser {
 			BeanDefinition bd = holder.getBeanDefinition(); //拿出BeanDefinition
 			try {
 				if (bd instanceof AnnotatedBeanDefinition) {  //判断是不是加了注解的
+					// 解析注解对象，并且把解析出来的bd方法map中，但是这里的bd指的的普通的
+					// 普通和不普通的怎么区分。比如@Bean和各种beanFactoryPostProcessor得到的bean
 					//如果被加了注解，又调用了一个parse()方法
 					parse(((AnnotatedBeanDefinition) bd).getMetadata(), holder.getBeanName());
 				}
@@ -229,6 +231,7 @@ class ConfigurationClassParser {
 			return;
 		}
 		//处理@Imported的情况
+		// 就是当前这个注解类有没有被别的类import
 		ConfigurationClass existingClass = this.configurationClasses.get(configClass);
 		if (existingClass != null) {
 			if (configClass.isImported()) {
@@ -247,6 +250,7 @@ class ConfigurationClassParser {
 		}
 
 		// Recursively process the configuration class and its superclass hierarchy.
+		// 把传入的类转换为SourceClass类型，其实就是转换AppConfig
 		SourceClass sourceClass = asSourceClass(configClass, filter);
 		do {
 			//重要的逻辑方法doProcessConfigurationClass()，进入
@@ -270,13 +274,14 @@ class ConfigurationClassParser {
 			ConfigurationClass configClass, SourceClass sourceClass, Predicate<String> filter)
 			throws IOException {
 
-		//首先处理内部类
+		//首先处理内部类，处理AppConfig的内部，基本上没啥人用吧
 		if (configClass.getMetadata().isAnnotated(Component.class.getName())) {
 			// Recursively process any member (nested) classes first
 			processMemberClasses(configClass, sourceClass, filter);
 		}
 
 		// Process any @PropertySource annotations
+		//处理@PropertySource注解
 		for (AnnotationAttributes propertySource : AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), PropertySources.class,
 				org.springframework.context.annotation.PropertySource.class)) {
@@ -295,9 +300,10 @@ class ConfigurationClassParser {
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
 				!this.conditionEvaluator.shouldSkip(sourceClass.getMetadata(), ConfigurationPhase.REGISTER_BEAN)) {
+			//因为@ComponentScan里的value是一个数组，所以要循环
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
-				//解析扫描的包，进入
+				//解析扫描的包，进入。扫描普通类@Component
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
@@ -315,7 +321,10 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @Import annotations
-		//处理@Import
+		//处理@Import import 有三种情况
+		// import普通类
+		// ImportSelector
+		// ImportBeanDefinitionRegistrar
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
 
 		// Process any @ImportResource annotations

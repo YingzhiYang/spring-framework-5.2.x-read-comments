@@ -57,13 +57,17 @@ final class PostProcessorRegistrationDelegate {
 			ConfigurableListableBeanFactory beanFactory, List<BeanFactoryPostProcessor> beanFactoryPostProcessors) {
 
 		// Invoke BeanDefinitionRegistryPostProcessors first, if any.
+		// 首先执行所有的BeanDefinitionRegistryPostProcessor，
+		// 这里也可以看出，Bean的初始化首先考虑的是处理BeanDefinitionRegistryPostProcessor，
+		// 而不是BeanDefinitionPostProcessor
 		Set<String> processedBeans = new HashSet<>();
 
 		if (beanFactory instanceof BeanDefinitionRegistry) {
 			BeanDefinitionRegistry registry = (BeanDefinitionRegistry) beanFactory;
 			List<BeanFactoryPostProcessor> regularPostProcessors = new ArrayList<>();
 			List<BeanDefinitionRegistryPostProcessor> registryProcessors = new ArrayList<>();
-			//自定义的BeanFactoryPostProcessors
+			//上面两个list放的都是自定义的BeanFactoryPostProcessor和BeanDefinitionRegistryPostProcessor
+			// 也就是说这个for循环处理的都是自定义的后置处理器
 			for (BeanFactoryPostProcessor postProcessor : beanFactoryPostProcessors) {
 				if (postProcessor instanceof BeanDefinitionRegistryPostProcessor) {
 					BeanDefinitionRegistryPostProcessor registryProcessor =
@@ -94,6 +98,7 @@ final class PostProcessorRegistrationDelegate {
 			List<BeanDefinitionRegistryPostProcessor> currentRegistryProcessors = new ArrayList<>();
 
 			// First, invoke the BeanDefinitionRegistryPostProcessors that implement PriorityOrdered.
+			// 首先这里执行所有实现了PriorityOrdered的BeanDefinitionRegistryPostProcessor
 			// 这个方法的作用是：对于匹配的类型，返回这个类型的名字。就是根据类型得到一个bean的名字。
 			// 这个type是指BeanDefinition中描述的当前类的class类型
 			String[] postProcessorNames =
@@ -125,6 +130,7 @@ final class PostProcessorRegistrationDelegate {
 			currentRegistryProcessors.clear();
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
+			//执行所有实现了Ordered类的BeanDefinitionRegistryPostProcessors
 			postProcessorNames = beanFactory.getBeanNamesForType(BeanDefinitionRegistryPostProcessor.class, true, false);
 			for (String ppName : postProcessorNames) {
 				if (!processedBeans.contains(ppName) && beanFactory.isTypeMatch(ppName, Ordered.class)) {
@@ -156,6 +162,9 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
+			// 执行BeanFactoryPostProcessor的回调
+			// 注意这里才真正开始执行BeanFactoryPostProcessor的回调，
+			// 前面都是在执行其子类BeanFactoryRegistryPostProcessor的回调
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}

@@ -265,7 +265,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 	public void processConfigBeanDefinitions(BeanDefinitionRegistry registry) {
 		//app提供的bean
 		List<BeanDefinitionHolder> configCandidates = new ArrayList<>();
-		//获取容器中注册的所有bean的名字
+		//获取容器中注册的所有bean的名字,6个
 		String[] candidateNames = registry.getBeanDefinitionNames();
 		//下面开始遍历解析candidateNames这个数组里面的名字对应的bean，其实这里会做的是找到@Configuration等等配置注解注册过的类，
 		// 然后解析这个类，也就是我们程序中的AppConfig.class。
@@ -279,12 +279,15 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 					logger.debug("Bean definition has already been processed as a configuration class: " + beanDef);
 				}
 			}//判断是否是Configuration类，其实就是把拿出来的所有BeanDefinition中有没有@Configuration注解
+			 // 如果不是的话，是不是加了别的注解，比如@Component，@ComponentScan，@Imported，@ImportResource这些
+			// 有@Configuration标识为Full，没有的标识为Lite
 			else if (ConfigurationClassUtils.checkConfigurationClassCandidate(beanDef, this.metadataReaderFactory)) {
 				//把Configuration类添加进去，添加的是BeanDefinitionHolder，这个类已经变成一个托盘了，
 				// 好像就是为了往一个list中传递map解构用的
 				configCandidates.add(new BeanDefinitionHolder(beanDef, beanName));
 			}
 		}
+		//经过上面的for循环以后configCandidates只会有加了配置注解的类了
 
 		// Return immediately if no @Configuration classes were found
 		if (configCandidates.isEmpty()) {
@@ -334,6 +337,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		 * alreadyParsed用来判断是否进行过处理
 		 */
 		Set<BeanDefinitionHolder> candidates = new LinkedHashSet<>(configCandidates);
+		//临时变量，用来存放上面的candidates中处理完了的类，所以这俩size都是一样的
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
 			//扫描包，把上面的set传来解析
