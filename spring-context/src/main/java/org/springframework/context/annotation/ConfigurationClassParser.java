@@ -295,7 +295,7 @@ class ConfigurationClassParser {
 		}
 
 		// Process any @ComponentScan annotations
-		//拿出来@ComponentScan，并且进行处理
+		//拿出来@ComponentScan，并且进行处里。
 		Set<AnnotationAttributes> componentScans = AnnotationConfigUtils.attributesForRepeatable(
 				sourceClass.getMetadata(), ComponentScans.class, ComponentScan.class);
 		if (!componentScans.isEmpty() &&
@@ -319,12 +319,28 @@ class ConfigurationClassParser {
 				}
 			}
 		}
+		/**
+		 * 到此，@ComponentScan把所有的普通类扫描结束
+		 * 并放到普通类中去了
+		 */
 
 		// Process any @Import annotations
 		//处理@Import import 有三种情况
-		// Import普通类
+		// Import普通类，就是加了@Component的类
 		// ImportSelector
 		// ImportBeanDefinitionRegistrar
+		/**
+		 * 这里处理Import主要是判断类中有@Import这个注解
+		 * 如果发现有@Import注解，就有三种情况(上面三种)：
+		 * 1. @Import一个普通的类：@Import(xxx.class)，那么就把xxx这个类传入进行解析。
+		 * 2. @Import是一个实现ImportSelector接口的类，那么就会去回调selector的方法
+		 * 		返回一个字符串(类名)，通过这个字符串得到一个类，继而递归调用processImports(...)方法来处理这个类。
+		 * 	严格来说selector方法所返回的类并不合符@Import(xxx.class)。因为返回出来的类，并没有被直接Import进去。
+		 * 	也因此不会调用getImports(sourceClass)这个方法，这个方法的作用是得到所有直接import的类。但是注意递归
+		 * 	当中是没有getImports(sourceClass)的，意思是直接把selector当中返回的类直接当成一个import的类去解析。
+		 * 总之一句话，以上两种情况下。@Import(xxx.class)，那么xxx这个类会被解析。
+		 * 如果xxx是selector那么其中返回的类虽然没有加上@Import，但是也会直接调用方法解析。
+		 */
 		processImports(configClass, sourceClass, getImports(sourceClass), filter, true);
 
 		// Process any @ImportResource annotations
@@ -586,6 +602,8 @@ class ConfigurationClassParser {
 					if (candidate.isAssignable(ImportSelector.class)) {
 						// Candidate class is an ImportSelector -> delegate to it to determine imports
 						Class<?> candidateClass = candidate.loadClass();
+						//反射得到一个对象，拿到对象以后Spring就知道到底要实例化的是哪些类。因为返回的是一个数组，所以是哪些。
+						//接着的事情就是要循环，并且实例化，最终放到一个map<name, BeanDefinition>中
 						ImportSelector selector = ParserStrategyUtils.instantiateClass(candidateClass, ImportSelector.class,
 								this.environment, this.resourceLoader, this.registry);
 						Predicate<String> selectorFilter = selector.getExclusionFilter();
@@ -595,7 +613,7 @@ class ConfigurationClassParser {
 						if (selector instanceof DeferredImportSelector) {
 							this.deferredImportSelectorHandler.handle(configClass, (DeferredImportSelector) selector);
 						}
-						else {
+						else { //判断并处理普通类，@Component的类
 							String[] importClassNames = selector.selectImports(currentSourceClass.getMetadata());
 							Collection<SourceClass> importSourceClasses = asSourceClasses(importClassNames, exclusionFilter);
 							processImports(configClass, currentSourceClass, importSourceClasses, exclusionFilter, false);
@@ -616,7 +634,7 @@ class ConfigurationClassParser {
 										this.environment, this.resourceLoader, this.registry);
 						configClass.addImportBeanDefinitionRegistrar(registrar, currentSourceClass.getMetadata());
 					}
-					else {//判断并处理普通类
+					else {//判断并处理普通类，@Component的类
 						// Candidate class not an ImportSelector or ImportBeanDefinitionRegistrar ->
 						// process it as an @Configuration class
 						this.importStack.registerImport(
