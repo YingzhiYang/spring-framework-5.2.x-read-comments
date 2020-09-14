@@ -126,7 +126,11 @@ final class PostProcessorRegistrationDelegate {
 			//合并list，把自己实现的和Spring实现的BeanDefinitionRegistryPostProcessor合并一起处理
 			registryProcessors.addAll(currentRegistryProcessors);
 			//调用这个方法处理currentRegistryProcessors，进入。registry这个参数是自定义的BeanFactoryPostProcessors
+			// 这里就执行了所有的BeanDefinitionRegistryProcessor
 			invokeBeanDefinitionRegistryPostProcessors(currentRegistryProcessors, registry);
+			//！！！！！！自此所有的BeanDefinitionRegistryProcessor都执行完了
+
+			//局部变量用完清除，防止内存泄露
 			currentRegistryProcessors.clear();
 
 			// Next, invoke the BeanDefinitionRegistryPostProcessors that implement Ordered.
@@ -144,6 +148,7 @@ final class PostProcessorRegistrationDelegate {
 			currentRegistryProcessors.clear();
 
 			// Finally, invoke all other BeanDefinitionRegistryPostProcessors until no further ones appear.
+			// 判断有没有新的加入进来，如果有重新执行。
 			boolean reiterate = true;
 			while (reiterate) {
 				reiterate = false;
@@ -162,10 +167,11 @@ final class PostProcessorRegistrationDelegate {
 			}
 
 			// Now, invoke the postProcessBeanFactory callback of all processors handled so far.
-			// 执行BeanFactoryPostProcessor的回调
-			// 注意这里才真正开始执行BeanFactoryPostProcessor的回调，
-			// 前面都是在执行其子类BeanFactoryRegistryPostProcessor的回调
+			// 执行BeanFactoryPostProcessor的回调，之前做的都是这个类的子类的回调
+			// 首先要处理BeanFactoryPostProcessor的子类BeanDefinitionRegistryPostProcessor
+			//   因为处理子类的时候，可能也会把父类一起处理(子类执行父类的方法)，所以要先处理子类
 			invokeBeanFactoryPostProcessors(registryProcessors, beanFactory);
+			// 然后再处理BeanFactoryPostProcessor的类
 			invokeBeanFactoryPostProcessors(regularPostProcessors, beanFactory);
 		}
 

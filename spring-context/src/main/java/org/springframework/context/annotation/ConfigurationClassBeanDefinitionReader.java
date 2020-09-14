@@ -116,6 +116,7 @@ class ConfigurationClassBeanDefinitionReader {
 	 */
 	public void loadBeanDefinitions(Set<ConfigurationClass> configurationModel) {
 		TrackedConditionEvaluator trackedConditionEvaluator = new TrackedConditionEvaluator();
+		//循环执行传递进来的类
 		for (ConfigurationClass configClass : configurationModel) {
 			loadBeanDefinitionsForConfigurationClass(configClass, trackedConditionEvaluator);
 		}
@@ -137,6 +138,8 @@ class ConfigurationClassBeanDefinitionReader {
 			return;
 		}
 
+		//如果一个类是import的，会被Spring标注上
+		//然后在这里完成注册
 		if (configClass.isImported()) {
 			registerBeanDefinitionForImportedConfigurationClass(configClass);
 		}
@@ -144,7 +147,9 @@ class ConfigurationClassBeanDefinitionReader {
 			loadBeanDefinitionsForBeanMethod(beanMethod);
 		}
 
+		// xml相关的
 		loadBeanDefinitionsFromImportedResources(configClass.getImportedResources());
+		// 加载Registrar，并且放到map中去
 		loadBeanDefinitionsFromRegistrars(configClass.getImportBeanDefinitionRegistrars());
 	}
 

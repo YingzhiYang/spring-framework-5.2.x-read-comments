@@ -343,7 +343,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 			//扫描包，把上面的set传来解析
 			parser.parse(candidates);
 			parser.validate();
-
+			//取出来@Import的数据，这个map中的数据是在ConfigurationClassParser.processConfigurationClass()方法里放入的
 			Set<ConfigurationClass> configClasses = new LinkedHashSet<>(parser.getConfigurationClasses());
 			configClasses.removeAll(alreadyParsed);
 
@@ -353,7 +353,13 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 						registry, this.sourceExtractor, this.resourceLoader, this.environment,
 						this.importBeanNameGenerator, parser.getImportRegistry());
 			}
-			//把扫描出来的bean对应的BeanDefinition放到factory的map中
+
+			/**
+			 * 把扫描出来的bean对应的BeanDefinition放到factory的map中
+			 * 这里有点要说下：扫描出来的Bean中可能包含了实现ImportBeanDefinitionRegistrar的接口的类
+			 * 但是实现了这个接口的类不会在configClasses中，因为ImportBeanDefinitionRegistrar的会放
+			 * 在另一个list中。
+			 */
 			this.reader.loadBeanDefinitions(configClasses);
 			alreadyParsed.addAll(configClasses);
 
