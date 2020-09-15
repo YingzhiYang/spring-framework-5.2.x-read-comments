@@ -89,6 +89,18 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		//扫描器：能够扫描类(也能扫描包)，并且转换成为一个BeanDefinition
 		//但是实际上扫描包不是scanner这个对象做的
 		//而是Spring自己new的一个ClassPathBeanDefinitionScanner
+		// 这个的调用在refresh()方法里，调用链：
+		// 		invokeBeanFactoryPostProcessors(...)->
+		//		PostProcessorRegistrationDelegate.invokeBeanFactoryPostProcessors(...)->
+		//		invokeBeanDefinitionRegistryPostProcessors(...)->
+		//		postProcessor(ConfigurationClassPostProcessor).postProcessBeanDefinitionRegistry(...)->
+		//		processConfigBeanDefinitions(...)->
+		//		parser.parse(...)->
+		//		parse(...)->
+		//		processConfigurationClass(...)->
+		//		doProcessConfigurationClass(...)->
+		//		this.componentScanParser.parse(...)->
+		//		ClassPathBeanDefinitionScanner scanner = new ClassPathBeanDefinitionScanner();
 		//这里的scanner仅仅是为了程序员能够在外部调用AnnotationConfigApplicationContext的scan方法设置的
 		this.scanner = new ClassPathBeanDefinitionScanner(this);
 	}

@@ -306,7 +306,7 @@ class ConfigurationClassParser {
 			//因为@ComponentScan里的value是一个数组，所以要循环
 			for (AnnotationAttributes componentScan : componentScans) {
 				// The config class is annotated with @ComponentScan -> perform the scan immediately
-				//解析扫描的包，进入。扫描普通类@Component
+				//解析扫描的包，进入。扫描普通类@Component。这里就又到扫描了
 				Set<BeanDefinitionHolder> scannedBeanDefinitions =
 						this.componentScanParser.parse(componentScan, sourceClass.getMetadata().getClassName());
 				// Check the set of scanned definitions for any further config classes and parse recursively if needed
