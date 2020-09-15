@@ -74,11 +74,13 @@ class ConfigurationClassEnhancer {
 
 	// The callbacks to use. Note that these callbacks must be stateless.
 	private static final Callback[] CALLBACKS = new Callback[] {
+			//增强方法，主要控制bean的作用域。不需要每次都new一个
 			new BeanMethodInterceptor(),
+			//设置一个beanFactory
 			new BeanFactoryAwareMethodInterceptor(),
 			NoOp.INSTANCE
 	};
-
+	//接着进入CALLBACK
 	private static final ConditionalCallbackFilter CALLBACK_FILTER = new ConditionalCallbackFilter(CALLBACKS);
 
 	private static final String BEAN_FACTORY_FIELD = "$$beanFactory";
@@ -95,6 +97,7 @@ class ConfigurationClassEnhancer {
 	 * @return the enhanced subclass
 	 */
 	public Class<?> enhance(Class<?> configClass, @Nullable ClassLoader classLoader) {
+		//判断有没有被代理过，一旦被代理就会产生一个接口，所以只要判断有EnhancedConfiguration这个接口就说明被代理过
 		if (EnhancedConfiguration.class.isAssignableFrom(configClass)) {
 			if (logger.isDebugEnabled()) {
 				logger.debug(String.format("Ignoring request to enhance %s as it has " +
@@ -104,9 +107,10 @@ class ConfigurationClassEnhancer {
 						"want check your configuration and remove one CCPP if possible",
 						configClass.getName()));
 			}
+			//发现被代理过，就直接返回
 			return configClass;
 		}
-		//cglib代理
+		//cglib代理  newEnhancer(configClass, classLoader)
 		Class<?> enhancedClass = createClass(newEnhancer(configClass, classLoader));
 		if (logger.isTraceEnabled()) {
 			logger.trace(String.format("Successfully enhanced %s; enhanced class name is: %s",
@@ -122,7 +126,7 @@ class ConfigurationClassEnhancer {
 		Enhancer enhancer = new Enhancer();
 		//增强父类，cglib基于继承
 		enhancer.setSuperclass(configSuperClass);
-		//增强接口，为什么要增强接口。因为要使用BeanFactory
+		//增强接口，为什么要增强接口。因为要使用BeanFactory，只要是被代理过的都会有这个接口EnhancedConfiguration
 		enhancer.setInterfaces(new Class<?>[] {EnhancedConfiguration.class});
 		enhancer.setUseFactory(false);
 		enhancer.setNamingPolicy(SpringNamingPolicy.INSTANCE);
@@ -132,7 +136,7 @@ class ConfigurationClassEnhancer {
 		// 有了factory就能获得对象，而不用通过方法获得对象了。因为通过方法获得对象不能控制容器的生成过程
 		// 改BeanFactory的作用是再this调用时拦截该调用，并直接再BeanFactory中获取目标bean
 		enhancer.setStrategy(new BeanFactoryAwareGeneratorStrategy(classLoader));
-		//
+		//过滤方法，不能每次都去new出来对象，进入CALLBACK_FILTER
 		enhancer.setCallbackFilter(CALLBACK_FILTER);
 		enhancer.setCallbackTypes(CALLBACK_FILTER.getCallbackTypes());
 		return enhancer;
@@ -329,6 +333,17 @@ class ConfigurationClassEnhancer {
 				}
 			}
 
+			// 判断执行的方法和调用方法是不是同一个方法
+			/**
+			 * 这里怎么判断呢？举个例子
+			 * a(){} 如果只有这一个方法，那么beanMethod(原始方法)==cglibMethodProxy(代理方法)
+			 * a(){
+			 *     c()
+			 * }
+			 * 如果再a()中又调用了一个c()方法，那么Spring就会认为c()是原始方法，a()是代理方法
+			 * 这里的判断也就是这样的原理判断的。如果二者不相等说明此方法已经被代理了，Spring就会去get拿到。
+			 * 如果二者相等，Spring就会认为这个是一个原始方法，因此会执行new。
+			 */
 			if (isCurrentlyInvokedFactoryMethod(beanMethod)) {
 				// The factory is calling the bean method in order to instantiate and register the bean
 				// (i.e. via a getBean() call) -> invoke the super implementation of the method to actually
@@ -343,9 +358,10 @@ class ConfigurationClassEnhancer {
 									"these container lifecycle issues; see @Bean javadoc for complete details.",
 							beanMethod.getDeclaringClass().getSimpleName(), beanMethod.getName()));
 				}
+				//因为在这里不可以new出来，所以调用父类的方法，注意这里是CGLIB基于继承，因此new的就是原始的
 				return cglibMethodProxy.invokeSuper(enhancedConfigInstance, beanMethodArgs);
 			}
-
+			//如果不相同，就去get出来
 			return resolveBeanReference(beanMethod, beanMethodArgs, beanFactory, beanName);
 		}
 
@@ -356,6 +372,11 @@ class ConfigurationClassEnhancer {
 			// the bean method, direct or indirect. The bean may have already been marked
 			// as 'in creation' in certain autowiring scenarios; if so, temporarily set
 			// the in-creation status to false in order to avoid an exception.
+			//判断对象是否正在创建
+			// 在java中一个对象有下面几种情况
+			//  1. 没有创建。可以通过getBean拿到。如果Spring发现没有创建，则新建一个所以可以直接拿。
+			//  2. 正在创建
+			//  3. 已经创建。直接getBean拿到。
 			boolean alreadyInCreation = beanFactory.isCurrentlyInCreation(beanName);
 			try {
 				if (alreadyInCreation) {

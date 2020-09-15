@@ -182,6 +182,7 @@ final class PostProcessorRegistrationDelegate {
 
 		// Do not initialize FactoryBeans here: We need to leave all regular beans
 		// uninitialized to let the bean factory post-processors apply to them!
+		//这里处理的是没有授权给bean工厂管理的post processor。说白了就是处理新添加的实现了ConfigurationClassPostProcessor的类。
 		String[] postProcessorNames =
 				beanFactory.getBeanNamesForType(BeanFactoryPostProcessor.class, true, false);
 
