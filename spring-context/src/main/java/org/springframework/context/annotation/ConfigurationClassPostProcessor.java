@@ -340,7 +340,7 @@ public class ConfigurationClassPostProcessor implements BeanDefinitionRegistryPo
 		//临时变量，用来存放上面的candidates中处理完了的类，所以这俩size都是一样的
 		Set<ConfigurationClass> alreadyParsed = new HashSet<>(configCandidates.size());
 		do {
-			//扫描包，把上面的set传来解析
+			//扫描包，把上面的set传来解析，进入
 			parser.parse(candidates);
 			parser.validate();
 			//取出来@Import的数据，这个map中的数据是在ConfigurationClassParser.processConfigurationClass()方法里放入的

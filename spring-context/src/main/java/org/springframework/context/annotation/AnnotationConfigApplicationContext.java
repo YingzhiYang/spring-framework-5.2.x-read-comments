@@ -86,6 +86,7 @@ public class AnnotationConfigApplicationContext extends GenericApplicationContex
 		 * BeanDefinitionRegistry的作用就是reader转换Bean为BeanDefinition后放到map中去
 		 */
 		this.reader = new AnnotatedBeanDefinitionReader(this);
+
 		//扫描器：能够扫描类(也能扫描包)，并且转换成为一个BeanDefinition
 		//但是实际上扫描包不是scanner这个对象做的
 		//而是Spring自己new的一个ClassPathBeanDefinitionScanner
