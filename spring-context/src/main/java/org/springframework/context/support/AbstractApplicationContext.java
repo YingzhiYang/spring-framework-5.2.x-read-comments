@@ -548,18 +548,24 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
+				// 国际化无关bean的过程
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
+				// spring的event事件
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
+				//空方法，可能后续版本实现
 				onRefresh();
 
 				// Check for listener beans and register them.
+				// 监听器的注册
 				registerListeners();
 
 				// Instantiate all remaining (non-lazy-init) singletons.
+				//在此之前，我们的类并没有进行实例化，上面的内容是把所有的bean变成BeanDefinition然后放到到BeanDefinitionMap中，
+				// 其中有些BeanPostProcessor被提前拿出来进行初始化为了进一步操作。其余的内容仍然没有初始化。
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.
@@ -887,6 +893,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void finishBeanFactoryInitialization(ConfigurableListableBeanFactory beanFactory) {
 		// Initialize conversion service for this context.
+		// ConversionService做类型转换用的
 		if (beanFactory.containsBean(CONVERSION_SERVICE_BEAN_NAME) &&
 				beanFactory.isTypeMatch(CONVERSION_SERVICE_BEAN_NAME, ConversionService.class)) {
 			beanFactory.setConversionService(
@@ -901,6 +908,9 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		}
 
 		// Initialize LoadTimeWeaverAware beans early to allow for registering their transformers early.
+		// ApsectJ做的静态织入的过程，由Spring去做。
+		// Spring AOP(JDK，CGLIB)是动态织入的，项目运行过程中做的动作
+		// AspectJ是静态织入的，项目编译过程中做的动作
 		String[] weaverAwareNames = beanFactory.getBeanNamesForType(LoadTimeWeaverAware.class, false, false);
 		for (String weaverAwareName : weaverAwareNames) {
 			getBean(weaverAwareName);
@@ -913,6 +923,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 		beanFactory.freezeConfiguration();
 
 		// Instantiate all remaining (non-lazy-init) singletons.
+		// 到目前为止Spring并没有实例化自建的Bean，从这里开始要准备开始实例化了
 		beanFactory.preInstantiateSingletons();
 	}
 

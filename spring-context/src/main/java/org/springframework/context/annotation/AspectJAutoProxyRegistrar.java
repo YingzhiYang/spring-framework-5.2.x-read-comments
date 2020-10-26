@@ -47,6 +47,7 @@ class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 		// 这行代码的作用是放到了BeanDefinition的map中，点进去就可以看到。
 		// 那么最后是谁拿出来的呢，就是PostProcessorRegistrationDelegate.registerBeanPostProcessors()方法里面的
 		// String[] postProcessorNames拿到了所有的BD，然后再实例化了
+		// 所以@EnableAspectJAutoProxy的作用是让Spring中的后置处理器list中添加一个后置处理器，让其变为一个代理对象去处理后续的功能
 		AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
 
 		AnnotationAttributes enableAspectJAutoProxy =

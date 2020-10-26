@@ -199,6 +199,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	@Override
 	public Object getBean(String name) throws BeansException {
+		//DefaultListableBeanFactory来的，进入这个
 		return doGetBean(name, null, null, false);
 	}
 
@@ -242,12 +243,15 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
 			throws BeansException {
-
+		//由于会生成一个代理所以Bean的name可能会是$name，这个transformedBeanName(name)方法就是去掉$符号
 		String beanName = transformedBeanName(name);
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
+		//首先看下能不能拿到这个实例，如果拿不到就说明是null
 		Object sharedInstance = getSingleton(beanName);
+		//这里为什么要判断是null呢，因为我们自己的bean在第一次运行的时候一定为null，因为没有东西给初始化，
+		// 如果不是null，就打印到log里，然后直接拿出来
 		if (sharedInstance != null && args == null) {
 			if (logger.isTraceEnabled()) {
 				if (isSingletonCurrentlyInCreation(beanName)) {
@@ -258,9 +262,10 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
+			//然后直接拿出来
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
-
+		//但是可以说，如果是自建的bean，99%的都应该是null，会走这里的逻辑
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
