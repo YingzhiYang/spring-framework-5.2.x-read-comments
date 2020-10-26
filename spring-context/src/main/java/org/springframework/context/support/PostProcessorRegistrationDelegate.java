@@ -232,7 +232,8 @@ final class PostProcessorRegistrationDelegate {
 
 	public static void registerBeanPostProcessors(
 			ConfigurableListableBeanFactory beanFactory, AbstractApplicationContext applicationContext) {
-
+		//从beanDefinitionMap中得到所有属于BeanPostProcessor类型的类名，这里的作用是为了把所有的后置处理器类拿出来，
+		// 供Spring识别，实例化，然后为Spring容器使用这些处理器做准备
 		String[] postProcessorNames = beanFactory.getBeanNamesForType(BeanPostProcessor.class, true, false);
 
 		// Register BeanPostProcessorChecker that logs an info message when
@@ -354,6 +355,9 @@ final class PostProcessorRegistrationDelegate {
 	 * BeanPostProcessor that logs an info message when a bean is created during
 	 * BeanPostProcessor instantiation, i.e. when a bean is not eligible for
 	 * getting processed by all BeanPostProcessors.
+	 * 当Spring配置的后置处理器还没有注册就已经开始了bean的初始化，
+	 * 便会打印出BeanPostProcessorChecker中设定的信息
+	 * 换句话说，就是检查Spring当中的bean有没有执行后置处理器，没有执行就会打印一句话
 	 */
 	private static final class BeanPostProcessorChecker implements BeanPostProcessor {
 

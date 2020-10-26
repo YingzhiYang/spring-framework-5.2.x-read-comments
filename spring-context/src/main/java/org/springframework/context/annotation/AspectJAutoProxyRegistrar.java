@@ -41,7 +41,12 @@ class AspectJAutoProxyRegistrar implements ImportBeanDefinitionRegistrar {
 	@Override
 	public void registerBeanDefinitions(
 			AnnotationMetadata importingClassMetadata, BeanDefinitionRegistry registry) {
-
+		//如果加上EnableAspectJAutoProxy这个注解，就会在初始化的时候多一个类AnnotationAutoProxyCreator
+		// 这个也是一个后置处理器，就是用来处理AOP的，点进入这个方法一层层的往里面找就会发现这个类也是继承自BeanPostProcessor的
+		// 也就是说如果我们加了Aspect的注释，这个类就会被Spring加入到BeanPostProcessor的列表里进行初始化
+		// 这行代码的作用是放到了BeanDefinition的map中，点进去就可以看到。
+		// 那么最后是谁拿出来的呢，就是PostProcessorRegistrationDelegate.registerBeanPostProcessors()方法里面的
+		// String[] postProcessorNames拿到了所有的BD，然后再实例化了
 		AopConfigUtils.registerAspectJAnnotationAutoProxyCreatorIfNecessary(registry);
 
 		AnnotationAttributes enableAspectJAutoProxy =

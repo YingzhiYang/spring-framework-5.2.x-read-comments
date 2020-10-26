@@ -541,7 +541,10 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				invokeBeanFactoryPostProcessors(beanFactory);
 
 				// Register bean processors that intercept bean creation.
-				// 注册bean拦截器
+				//注册bean后置处理器。
+				// 为什么要注册后置处理器？因为Spring内部是把这些bean对象当作一个list处理的，
+				// 只有注册进去list才能让这个类进行后续的处理，否则这个类无法被Spring实例化，
+				// 这里所谓的注册就是要维护这些处理器
 				registerBeanPostProcessors(beanFactory);
 
 				// Initialize message source for this context.
@@ -762,6 +765,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 	 */
 	protected void initMessageSource() {
 		ConfigurableListableBeanFactory beanFactory = getBeanFactory();
+		//查找是否包含了名为messageSource的bean，如果没有，创建一个默认的
 		if (beanFactory.containsLocalBean(MESSAGE_SOURCE_BEAN_NAME)) {
 			this.messageSource = beanFactory.getBean(MESSAGE_SOURCE_BEAN_NAME, MessageSource.class);
 			// Make MessageSource aware of parent MessageSource.
