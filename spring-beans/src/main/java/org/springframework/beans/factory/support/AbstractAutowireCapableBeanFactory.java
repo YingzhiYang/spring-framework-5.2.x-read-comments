@@ -39,6 +39,7 @@ import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 
+import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -426,7 +427,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeansException {
 
 		Object result = existingBean;
+		//这个for循环就是在执行Spring初始化的那些后置处理器里面的逻辑
 		for (BeanPostProcessor processor : getBeanPostProcessors()) {
+			//最终是被AbstractAutoProxyCreator.postProcessAfterInitialization方法做的处理
 			Object current = processor.postProcessAfterInitialization(result, beanName);
 			if (current == null) {
 				return result;
@@ -480,6 +483,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (logger.isTraceEnabled()) {
 			logger.trace("Creating instance of bean '" + beanName + "'");
 		}
+		//拿到BeanDefinition
 		RootBeanDefinition mbdToUse = mbd;
 
 		// Make sure bean class is actually resolved at this point, and
@@ -513,6 +517,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		try {
+			//doCreateBean从名字看，这里就是创建bean的地方，那么代理应该也是在这里被创建的
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Finished creating instance of bean '" + beanName + "'");
@@ -548,13 +553,17 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeanCreationException {
 
 		// Instantiate the bean.
+		// BeanWrapper就是对真是类的一个包装，把真实类的方法，属性等等一切信息包装成为一个类BeanWrapper，
+		// 为了给后面方便使用
 		BeanWrapper instanceWrapper = null;
 		if (mbd.isSingleton()) {
 			instanceWrapper = this.factoryBeanInstanceCache.remove(beanName);
 		}
 		if (instanceWrapper == null) {
+			//创建包装对象
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
+		//getWrappedInstance()是为了拿到原生对象的，也就是说bean就是原生对象了，那么下面就应该是创建代理了
 		Object bean = instanceWrapper.getWrappedInstance();
 		Class<?> beanType = instanceWrapper.getWrappedClass();
 		if (beanType != NullBean.class) {
@@ -565,6 +574,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
+					//重点方法
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -588,9 +598,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 
 		// Initialize the bean instance.
+		// 传递原生对象给exposedObject
 		Object exposedObject = bean;
 		try {
+			//赋值属性的，如果有依赖，就是在这里处理的
 			populateBean(beanName, mbd, instanceWrapper);
+			//这句话跑完以后，原生对象被替换为代理对象，进入这个方法看看是怎么做的
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -1783,6 +1796,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		Object wrappedBean = bean;
 		if (mbd == null || !mbd.isSynthetic()) {
+			//从名字看这里是执行BeanPostProcessorsBeforeInitialization方法，做了一些准备
+			// 就是BeanPostProcessors接口的两个方法之一
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1795,6 +1810,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 					beanName, "Invocation of init method failed", ex);
 		}
 		if (mbd == null || !mbd.isSynthetic()) {
+			//从名字看这里是执行BeanPostProcessorsBeforeInitialization方法，
+			// 就是BeanPostProcessors接口的两个方法之一，但是这里运行以后，就变成代理了
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 

@@ -110,6 +110,7 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 
 	@Override
 	public Object getProxy() {
+		//继续进入
 		return getProxy(ClassUtils.getDefaultClassLoader());
 	}
 
@@ -120,6 +121,8 @@ final class JdkDynamicAopProxy implements AopProxy, InvocationHandler, Serializa
 		}
 		Class<?>[] proxiedInterfaces = AopProxyUtils.completeProxiedInterfaces(this.advised, true);
 		findDefinedEqualsAndHashCodeMethods(proxiedInterfaces);
+		//看这里Proxy.newProxyInstance(classLoader, proxiedInterfaces, this);，做了一个代理对象。
+		//所以说Spring底层用的是动态代理
 		return Proxy.newProxyInstance(classLoader, proxiedInterfaces, this);
 	}
 

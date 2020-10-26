@@ -294,8 +294,11 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 	@Override
 	public Object postProcessAfterInitialization(@Nullable Object bean, String beanName) {
 		if (bean != null) {
+			//首先从缓存中拿
 			Object cacheKey = getCacheKey(bean.getClass(), beanName);
+			//由于还没有实例化出来，无法拿到
 			if (this.earlyProxyReferences.remove(cacheKey) != bean) {
+				//进入这个方法
 				return wrapIfNecessary(bean, beanName, cacheKey);
 			}
 		}
@@ -344,9 +347,13 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		}
 
 		// Create proxy if we have advice.
+		// 解析所有的切面，并判断是否符合pointcut所描述的切点位置。specificInterceptors还会传给代理工厂用来创建代理对象
 		Object[] specificInterceptors = getAdvicesAndAdvisorsForBean(bean.getClass(), beanName, null);
+		//如果不代理，就不走这里了。但是Spring AOP如果不做特殊方法就是代理，因此走下去。
+		// 这里外部可以设置，但是一旦设置了，就再也没有代理了
 		if (specificInterceptors != DO_NOT_PROXY) {
 			this.advisedBeans.put(cacheKey, Boolean.TRUE);
+			//创建代理，传入相关的参数，beanName，specificInterceptors等等。
 			Object proxy = createProxy(
 					bean.getClass(), beanName, specificInterceptors, new SingletonTargetSource(bean));
 			this.proxyTypes.put(cacheKey, proxy.getClass());
@@ -445,20 +452,22 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 		if (this.beanFactory instanceof ConfigurableListableBeanFactory) {
 			AutoProxyUtils.exposeTargetClass((ConfigurableListableBeanFactory) this.beanFactory, beanName, beanClass);
 		}
-
+		//创建一个代理工厂
 		ProxyFactory proxyFactory = new ProxyFactory();
 		proxyFactory.copyFrom(this);
 
 		if (!proxyFactory.isProxyTargetClass()) {
+			//判断是不是需要CGLIB代理
 			if (shouldProxyTargetClass(beanClass, beanName)) {
-				proxyFactory.setProxyTargetClass(true);
+				proxyFactory.setProxyTargetClass(true); //需要就设置为true
 			}
 			else {
 				evaluateProxyInterfaces(beanClass, proxyFactory);
 			}
 		}
-
+		//把切面信息放到这里来
 		Advisor[] advisors = buildAdvisors(beanName, specificInterceptors);
+		//初始化proxyFactory的各种信息，before，after，around，具体内容之类的。为了创建代理使用的
 		proxyFactory.addAdvisors(advisors);
 		proxyFactory.setTargetSource(targetSource);
 		customizeProxyFactory(proxyFactory);
@@ -468,6 +477,7 @@ public abstract class AbstractAutoProxyCreator extends ProxyProcessorSupport
 			proxyFactory.setPreFiltered(true);
 		}
 
+		//得到代理，那么代理对象就是在这里被创建的
 		return proxyFactory.getProxy(getProxyClassLoader());
 	}
 

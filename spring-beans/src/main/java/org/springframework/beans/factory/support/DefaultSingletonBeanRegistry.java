@@ -206,7 +206,9 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 	public Object getSingleton(String beanName, ObjectFactory<?> singletonFactory) {
 		Assert.notNull(beanName, "Bean name must not be null");
 		synchronized (this.singletonObjects) {
+			//从容器中拿出来bean，如果是第一次进来，就应该是null
 			Object singletonObject = this.singletonObjects.get(beanName);
+			//如果是null，进入逻辑
 			if (singletonObject == null) {
 				if (this.singletonsCurrentlyInDestruction) {
 					throw new BeanCreationNotAllowedException(beanName,
@@ -223,6 +225,10 @@ public class DefaultSingletonBeanRegistry extends SimpleAliasRegistry implements
 					this.suppressedExceptions = new LinkedHashSet<>();
 				}
 				try {
+					//到这一步，bean被创建出来，但是此时如果打个断点就会发现，singletonObject这里不是原生对象，
+					// 而是成为一个代理对象，原生对象并不是直接new出来使用的。
+					// 也就意味着，此时原生的对象在这里被后置处理器做了手脚，出去看return createBean(beanName, mbd, args);
+					// 是不是做了什么事情
 					singletonObject = singletonFactory.getObject();
 					newSingleton = true;
 				}

@@ -300,6 +300,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 			}
 
 			try {
+				//根据bean名字拿一个BD出来
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
 
@@ -323,9 +324,12 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				}
 
 				// Create bean instance.
+				// 看这里的官方注释，此时开始创建Bean Instance
 				if (mbd.isSingleton()) {
+					// 这里使用java8的表达式，new了一个匿名类
 					sharedInstance = getSingleton(beanName, () -> {
 						try {
+							//进入createBean方法，看看里面是如何创建类的
 							return createBean(beanName, mbd, args);
 						}
 						catch (BeansException ex) {
