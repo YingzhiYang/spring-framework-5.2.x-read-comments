@@ -243,12 +243,32 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 	protected <T> T doGetBean(
 			String name, @Nullable Class<T> requiredType, @Nullable Object[] args, boolean typeCheckOnly)
 			throws BeansException {
-		//由于会生成一个代理所以Bean的name可能会是$name，这个transformedBeanName(name)方法就是去掉$符号
+		/**
+		 * 由于会生成一个代理所以Bean的name可能会是&name，这个transformedBeanName(name)方法就是去掉$符号
+		 * 这里通过name获取beanName，但是不直接使用Name作为beanName有下面原因
+		 * 	  name的值可能是&name，也就是以&字符开头是一个代理。这里说明调用者想获取FactoryBean本省而非实现类所创建的bean。
+		 * 	  在BeanFactory中，FactoryBean的实现类和其他的实现方式是一致的，即<beanName,bean>,beanName是没有&这个字符的。
+		 * 	  只有把&name前面的&符号去除，才能从缓存里取出来FactoruBean的实例。
+		 */
 		String beanName = transformedBeanName(name);
 		Object bean;
 
 		// Eagerly check singleton cache for manually registered singletons.
-		//首先看下能不能拿到这个实例，如果拿不到就说明是null
+		/**
+		 * 这个方法在初始化的时候会调用，在getBean的时候也会调用，为什么要这么做去拿到实例？
+		 * 	就是说Spring在初始化的时候先获取这个对象，判断这个对象是不是被初始化好了(一般情况下绝对为null)。
+		 * 	从Spring的bean容器中获取一个备案，由于Spring中bean容器时一个单例Map，
+		 * 	所以可以理解为getSingleton(beanName) 等同于 beanMap.get(beanName)。
+		 * 由于方法会在Spring环境初始化的时候调用，也就是对象被创建的时候调用一次。
+		 * 	然后还要再getBean的时候在调用一次，所以在调试的时候要注意不能直接断点在这里
+		 * 	需要先进入到anno.getBean(beanName.class)以后断点，这样能够确保我们是在获取特定目标bean的时候被调用的。
+		 *
+		 * 	需要说明下：初始化的时候普通类一般都是null，因为没有东西进行初始化。
+		 * 	但是有一种情况不为null，那就是当这个类为lazy的时候。因为lazy的类只会在使用的时候才被初始化。
+		 * 	因此第一次调用的时候，lazy的类有可能会被初始化，但是不使用，比如它被依赖了。
+		 * 	使用的时候还会再走一次初始化流程，那个时候就会直接拿出来使用了。
+		 */
+		//首先看下能不能拿到这个实例，如果拿不到就说明是null，从这里把bean从容器中拿出来
 		Object sharedInstance = getSingleton(beanName);
 		//这里为什么要判断是null呢，因为我们自己的bean在第一次运行的时候一定为null，因为没有东西给初始化，
 		// 如果不是null，就打印到log里，然后直接拿出来
@@ -262,18 +282,26 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					logger.trace("Returning cached instance of singleton bean '" + beanName + "'");
 				}
 			}
-			//然后直接拿出来
+			/**
+			 * 如果sharedInstance对象拿出来的时普通的bean，下面的方法会直接返回
+			 * 但是如果sharedInstance是FactoryBean类型的，则需要调用getObject工厂方法获取获取bean实例。
+			 * 如果用户想要获取FactoryBean本身，这里并不需要做特殊处理，毕竟FactoryBean的实现类本身也是一种bean，
+			 * 只不过比较特殊。
+			 */
 			bean = getObjectForBeanInstance(sharedInstance, name, beanName, null);
 		}
 		//但是可以说，如果是自建的bean，99%的都应该是null，会走这里的逻辑
 		else {
 			// Fail if we're already creating this bean instance:
 			// We're assumably within a circular reference.
+			/**
+			 * 如果不是原型，就不应该在初始化的时候创建，因此会报错
+			 */
 			if (isPrototypeCurrentlyInCreation(beanName)) {
 				throw new BeanCurrentlyInCreationException(beanName);
 			}
 
-			// Check if bean definition exists in this factory.
+			// Check if bean definition exists in this factory. 此处是父工厂逻辑，没甚用
 			BeanFactory parentBeanFactory = getParentBeanFactory();
 			if (parentBeanFactory != null && !containsBeanDefinition(beanName)) {
 				// Not found -> check parent.
@@ -294,7 +322,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 					return (T) parentBeanFactory.getBean(nameToLookup);
 				}
 			}
-
+			//添加到alreadyCreated set集合当中，标识这个bean已经被创建过了，防止重复创建
 			if (!typeCheckOnly) {
 				markBeanAsCreated(beanName);
 			}
@@ -303,7 +331,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 				//根据bean名字拿一个BD出来
 				RootBeanDefinition mbd = getMergedLocalBeanDefinition(beanName);
 				checkMergedBeanDefinition(mbd, beanName, args);
-
+				//判断是不是有依赖
 				// Guarantee initialization of beans that the current bean depends on.
 				String[] dependsOn = mbd.getDependsOn();
 				if (dependsOn != null) {

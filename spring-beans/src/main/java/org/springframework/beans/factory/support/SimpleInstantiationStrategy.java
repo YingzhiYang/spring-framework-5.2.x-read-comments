@@ -60,13 +60,15 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 	@Override
 	public Object instantiate(RootBeanDefinition bd, @Nullable String beanName, BeanFactory owner) {
 		// Don't override the class with CGLIB if no overrides.
+		// 检查bean配置中是否配置了lookup-method或者replace-method
+		// 如果配置了，就使用CGLIB构建bean对象
 		if (!bd.hasMethodOverrides()) {
 			Constructor<?> constructorToUse;
 			synchronized (bd.constructorArgumentLock) {
 				constructorToUse = (Constructor<?>) bd.resolvedConstructorOrFactoryMethod;
 				if (constructorToUse == null) {
 					final Class<?> clazz = bd.getBeanClass();
-					if (clazz.isInterface()) {
+					if (clazz.isInterface()) { //如果是一个接口报异常
 						throw new BeanInstantiationException(clazz, "Specified class is an interface");
 					}
 					try {
@@ -75,8 +77,10 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 									(PrivilegedExceptionAction<Constructor<?>>) clazz::getDeclaredConstructor);
 						}
 						else {
+							//得到默认的构造方法。constructorToUse这个对象表示Spring使用哪个构造方法实例化对象
 							constructorToUse = clazz.getDeclaredConstructor();
 						}
+						//传值
 						bd.resolvedConstructorOrFactoryMethod = constructorToUse;
 					}
 					catch (Throwable ex) {
@@ -84,6 +88,7 @@ public class SimpleInstantiationStrategy implements InstantiationStrategy {
 					}
 				}
 			}
+			//使用这个方法创建实例对象，最终一步一步的返回去就到了DefaultSingletonBeanRegistry.getSingleton()那里了
 			return BeanUtils.instantiateClass(constructorToUse);
 		}
 		else {

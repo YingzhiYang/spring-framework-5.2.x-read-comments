@@ -184,11 +184,16 @@ public abstract class BeanUtils {
 	public static <T> T instantiateClass(Constructor<T> ctor, Object... args) throws BeanInstantiationException {
 		Assert.notNull(ctor, "Constructor must not be null");
 		try {
+			//设置构造方法为可访问
 			ReflectionUtils.makeAccessible(ctor);
+			//判断是否使用的了Kotlin，一般情况下不是
 			if (KotlinDetector.isKotlinReflectPresent() && KotlinDetector.isKotlinType(ctor.getDeclaringClass())) {
 				return KotlinDelegate.instantiateClass(ctor, args);
 			}
 			else {
+				//到这里来，尝试拿参数由于默认的构造方法就没有传递参数进来
+				// BeanUtils.instantiateClass(constructorToUse)，因此此处不会执行。
+				// 这里之所以这么写，应该是为了扩展起来方便，旧版本代码没有这些内容
 				Class<?>[] parameterTypes = ctor.getParameterTypes();
 				Assert.isTrue(args.length <= parameterTypes.length, "Can't specify more arguments than constructor parameters");
 				Object[] argsWithDefaultValues = new Object[args.length];
@@ -201,6 +206,7 @@ public abstract class BeanUtils {
 						argsWithDefaultValues[i] = args[i];
 					}
 				}
+				//创建反射对象
 				return ctor.newInstance(argsWithDefaultValues);
 			}
 		}
