@@ -586,7 +586,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					//重点方法
+					//后置处理器，用户合并bean
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -606,6 +606,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
+			//重点方法把new出来的bean，放到map中
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -1224,7 +1225,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		}
 		if (resolved) {
 			if (autowireNecessary) {
-				//如果是一个必须要注入的，通过构造方法自动装配的方式构造bean的对象
+				//如果是一个必须要注入的，通过构造方法自动装配的方式构造bean的对象，这里的条件是有且只有一个
 				return autowireConstructor(beanName, mbd, null, null);
 			}
 			else {
@@ -1238,7 +1239,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		 * 拿到要实例化的bean的构造方法，方法里是由后置处理器决定返回哪些构造方法，进入determineConstructorsFromBeanPostProcessors()
 		 * 		determineConstructorsFromBeanPostProcessors()这个方法是决定是否使用无参构造方法(默认构造方法)，
 		 * 		如果Spring发现目标bean内只有无参的构造方法且唯一，ctors则为null，使用instantiateBean(beanName, mbd)创建实例。
-		 * 		如果Spring发现目标bean内有带参的构造方法且唯一，则把其他方法传递给ctors，使用autowireConstructor(beanName, mbd, ctors, args)创建实例。
+		 * 		如果Spring发现目标bean内有带参的构造方法且唯一，则把其这个方法传递给ctors，使用autowireConstructor(beanName, mbd, ctors, args)创建实例。
 		 * 		如果Spring发现目标bean内多个构造方法，则默认使用无参构造方法，因此ctors也为null.
 		 *
 		 * 	此处还有一个知识点：AUTOWIRE_CONSTRUCTOR。
@@ -1410,7 +1411,9 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 */
 	protected BeanWrapper autowireConstructor(
 			String beanName, RootBeanDefinition mbd, @Nullable Constructor<?>[] ctors, @Nullable Object[] explicitArgs) {
-
+		//autowireConstructor这个方法是用构造方法实例化bean的地方，但是有点要说明。Spring自动注入的情况下，这个ctors参数永远为1，
+		//参见外部注解，但是为什么里面要用for循环去循环多个构造方法呢？是为了给用户用的，而不是容器初始化Spring自己默认用的。
+		//比如用户在Spring构造的时候干预了某个bean的实例化过程，就会用到这个地方
 		return new ConstructorResolver(this).autowireConstructor(beanName, mbd, ctors, explicitArgs);
 	}
 
