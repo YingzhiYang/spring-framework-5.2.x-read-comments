@@ -141,6 +141,7 @@ class ConstructorResolver {
 
 		//确定参数值列表
 		//argsToUse有两个办法设置：1.通过beanDefinition设置；2.通过xml设置
+		// explicitArgs是从createBeanInstance方法传递过来的构造方法的值，但是如果从createBeanInstance调试永远为null
 		if (explicitArgs != null) {
 			argsToUse = explicitArgs;
 		}
@@ -173,7 +174,9 @@ class ConstructorResolver {
 			Constructor<?>[] candidates = chosenCtors;
 			if (candidates == null) { //如果发现没有传递进来，就是说传进来的是null
 				Class<?> beanClass = mbd.getBeanClass();
-				try {//解析构造方法
+				try {//解析构造方法，也就是拿到所有的构造方法。为什么还要拿出所有的构造方法？
+					//因为外部Spring由于判断一个类多个构造方法因而把所有的构造方法都舍弃了导致chosenCtors为null
+					// 但是到这里Spring认为还是需要使用构造方法，因此全部拿出来做一个精准匹配，逻辑就在下面
 					candidates = (mbd.isNonPublicAccessAllowed() ?
 							beanClass.getDeclaredConstructors() : beanClass.getConstructors());
 				}
@@ -183,9 +186,10 @@ class ConstructorResolver {
 							"] from ClassLoader [" + beanClass.getClassLoader() + "] failed", ex);
 				}
 			}
-			//如果上述发现构造方法是唯一的
+			//这里就是针对构造方法做匹配的地方
+			// 如果上述发现构造方法是唯一的
 			if (candidates.length == 1 && explicitArgs == null && !mbd.hasConstructorArgumentValues()) {
-				Constructor<?> uniqueCandidate = candidates[0]; //拿出构造方法
+				Constructor<?> uniqueCandidate = candidates[0]; //拿出构造方法中第一个值，因为是唯一的所以是0
 				if (uniqueCandidate.getParameterCount() == 0) { //判断有没有参数
 					synchronized (mbd.constructorArgumentLock) { //有参数把解析出来的值赋上
 						mbd.resolvedConstructorOrFactoryMethod = uniqueCandidate;
@@ -197,13 +201,13 @@ class ConstructorResolver {
 					return bw;
 				}
 			}
-			//做一个flag用于：判断传入的构造方法不为null，判断是否根据构造方法AUTOWIRE_CONSTRUCTOR自动注入
+			//做一个flag用于：读取构造方法不为null，判断是否根据构造方法AUTOWIRE_CONSTRUCTOR自动注入
 			// Need to resolve the constructor.
 			boolean autowiring = (chosenCtors != null ||
 					mbd.getResolvedAutowireMode() == AutowireCapableBeanFactory.AUTOWIRE_CONSTRUCTOR);
 			//定义参数的值
 			ConstructorArgumentValues resolvedValues = null;
-			//定义构造方法最小参数个数
+			//定义构造方法最小参数个数，也就是构造方法需要几个参数
 			//如果给的构造方法的参数列表有具体的值，那么这些值得个数就是构造方法参数的个数
 			int minNrOfArgs;
 			if (explicitArgs != null) { //explicitArgs参数是外部传进来的，传进来的就是具体参数的值，这里是一个数组
@@ -212,6 +216,7 @@ class ConstructorResolver {
 			}
 			else {
 				//实例一个对象，用来存放构造方法的参数值，当中主要存放了参数值和参数值所对应的下标
+				// cargs获取的也是构造方法的值
 				ConstructorArgumentValues cargs = mbd.getConstructorArgumentValues();
 				resolvedValues = new ConstructorArgumentValues();
 				/**
@@ -238,7 +243,7 @@ class ConstructorResolver {
 			 * 	4. protected Sample(Integer i1,Object obj1,Object obj2,Object obj3)
 			 * 	5. protected Sample(Integer i1,Object obj1,Object obj2)
 			 * 	6. private Sample(Integer i1,Object obj1,Object obj2)
-			 * 	这里的排序逻辑是public>protected>private，访问权限大的靠前。
+			 * 	这里的排序逻辑是public>protected>private，访问权限大的靠前，也会优先进行选择。
 			 * 		比较完访问权限以后，比较参数的个数，参数个数多的靠前。
 			 * 		因此如果有6个构造参数会形成这样一个顺序，越靠前就代表权限越大，越容易被匹配到，
 			 * 		因此下面的例子中，会选择1而不是5。
@@ -246,23 +251,26 @@ class ConstructorResolver {
 			AutowireUtils.sortConstructors(candidates);
 			//定义一个差异变量，重要的变量
 			int minTypeDiffWeight = Integer.MAX_VALUE;
-			//定义有歧义的构造方法，
+			//存放定义有歧义的构造方法，什么是有歧义的，比如两个构造方法都是一个参数，但是仅仅参数类型不同
 			Set<Constructor<?>> ambiguousConstructors = null;
 			LinkedList<UnsatisfiedDependencyException> causes = null;
 			//循环所有的构造方法
 			for (Constructor<?> candidate : candidates) {
-				//拿出参数列表的长度，就是有多少个参数数量
+				//拿出参数列表的长度，就是有多少个参数数量，首先参数最多的在前面
 				int parameterCount = candidate.getParameterCount();
 				/** 首先会进入这个条件判断：
 				 * constructorToUse != null这个已经明白，刚才已经说过constructorToUse是用来装已经解析过了的并且在使用的构造方法
 				 * 		只有在这个为null的情况下，才有继续的意义，因为下面的代码就是解析一个构造方法，然后赋值给这个变量。
-				 * 		因此这个变量不等于null，就不需要在进行解析，找到一个合适的直接用就可以了，因此可以直接break。
-				 * 	argsToUse != null也好理解，如果这个是null，就不用再判断后面的了，而且也可以避免一个空指针异常。
+				 * 		因此这个变量不等于null，就意味着找到一个合适的，不需要在进行解析，因此可以直接break，下面有赋值的地方。
+				 * 	argsToUse != null也好理解，如果这个是null，就不用再判断后面的了，用默认的就好了，而且也可以避免一个空指针异常。
 				 * 	argsToUse.length > parameterCount比较难以解释，首先说argsToUse是存放参数值的数组
 				 * 		假设argsToUse=[1,"sample",obj]
 				 * 		那么回去匹配到上面构造方法的1和5
 				 * 		由于构造方法1有更高的访问权限，所以选择1，尽管5看起来更加比配
 				 * 		如果看2，直接参数个数就不对因此可以忽略
+				 *
+				 * 	由于是顺序的，所以argsToUse.length > parameterCount条件的存在，就导致了2和3根本就不会走到后面的流程，因为如
+				 * 		果说1有三个参数都不满足，那么2和3的parameterCount则会更小，直接就break了，可以说这个判断非常巧妙。
 				 */
 				if (constructorToUse != null && argsToUse != null && argsToUse.length > parameterCount) {
 					// Already found greedy constructor that can be satisfied ->
@@ -337,7 +345,7 @@ class ConstructorResolver {
 						argsHolder.getTypeDifferenceWeight(paramTypes) : argsHolder.getAssignabilityWeight(paramTypes));
 				// Choose this constructor if it represents the closest match.
 				if (typeDiffWeight < minTypeDiffWeight) {
-					constructorToUse = candidate;
+					constructorToUse = candidate;  //找到以后赋值，循环下一次，试图寻找更符合的
 					argsHolderToUse = argsHolder;
 					argsToUse = argsHolder.arguments;
 					minTypeDiffWeight = typeDiffWeight;
