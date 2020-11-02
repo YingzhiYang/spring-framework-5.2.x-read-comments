@@ -119,6 +119,7 @@ public class InjectionMetadata {
 	}
 
 	public void inject(Object target, @Nullable String beanName, @Nullable PropertyValues pvs) throws Throwable {
+		//拿出所有的属性
 		Collection<InjectedElement> checkedElements = this.checkedElements;
 		Collection<InjectedElement> elementsToIterate =
 				(checkedElements != null ? checkedElements : this.injectedElements);
@@ -127,6 +128,11 @@ public class InjectionMetadata {
 				if (logger.isTraceEnabled()) {
 					logger.trace("Processing injected element of bean '" + beanName + "': " + element);
 				}
+				//循环element，把所有的属性都注入进去
+				//注意是进入了AutowiredAnnotationBeanPostProcessor.AutowiredFieldElement.inject()这个方法里
+				// 值得注意的是，这个方法有两个重载，一个是给field用的，一个是给method用的。属性的要找field这个
+				// AutowiredAnnotationBeanPostProcessor.AutowiredFieldElement.inject	属性用
+				// AutowiredAnnotationBeanPostProcessor.AutowiredMethodElement.inject	方法用
 				element.inject(target, beanName, pvs);
 			}
 		}

@@ -1238,9 +1238,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			return new Jsr330Factory().createDependencyProvider(descriptor, requestingBeanName);
 		}
 		else {
+			//上面的if在判断各种类型，但是很明显这些都是java或者Spring内部类，因此会直接到这里来
 			Object result = getAutowireCandidateResolver().getLazyResolutionProxyIfNecessary(
 					descriptor, requestingBeanName);
-			if (result == null) {
+			if (result == null) {//最终发现result不存在，因为首次运行还没有初始化
+				//doResolveDependency()进行转换
 				result = doResolveDependency(descriptor, requestingBeanName, autowiredBeanNames, typeConverter);
 			}
 			return result;
@@ -1257,9 +1259,11 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 			if (shortcut != null) {
 				return shortcut;
 			}
-
+			//属性(依赖)的类型
 			Class<?> type = descriptor.getDependencyType();
+			//要实例化引用，第一步先去bean工厂去找
 			Object value = getAutowireCandidateResolver().getSuggestedValue(descriptor);
+			//如果找到了，直接给值
 			if (value != null) {
 				if (value instanceof String) {
 					String strVal = resolveEmbeddedValue((String) value);
@@ -1278,12 +1282,12 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 							converter.convertIfNecessary(value, type, descriptor.getMethodParameter()));
 				}
 			}
-
+			//尝试去bean工厂拿出实例
 			Object multipleBeans = resolveMultipleBeans(descriptor, beanName, autowiredBeanNames, typeConverter);
 			if (multipleBeans != null) {
 				return multipleBeans;
 			}
-
+			//把引用的值和类型拿出来放到一个map中
 			Map<String, Object> matchingBeans = findAutowireCandidates(beanName, type, descriptor);
 			if (matchingBeans.isEmpty()) {
 				if (isRequired(descriptor)) {
@@ -1294,7 +1298,7 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 
 			String autowiredBeanName;
 			Object instanceCandidate;
-
+			//如果有多个就无法判断是要用哪个实例对象，因此Spring就直接不判断，返回null
 			if (matchingBeans.size() > 1) {
 				autowiredBeanName = determineAutowireCandidate(matchingBeans, descriptor);
 				if (autowiredBeanName == null) {
@@ -1311,16 +1315,19 @@ public class DefaultListableBeanFactory extends AbstractAutowireCapableBeanFacto
 				instanceCandidate = matchingBeans.get(autowiredBeanName);
 			}
 			else {
-				// We have exactly one match.
+				// We have exactly one match. 精确匹配到了这样一个值
 				Map.Entry<String, Object> entry = matchingBeans.entrySet().iterator().next();
 				autowiredBeanName = entry.getKey();
 				instanceCandidate = entry.getValue();
 			}
 
 			if (autowiredBeanNames != null) {
+				//找到beanName的就添加到一个缓存中
 				autowiredBeanNames.add(autowiredBeanName);
 			}
+			//如果发现拿出来的是一个Class类型
 			if (instanceCandidate instanceof Class) {
+				//实例化属性，即便这个属性没有在工厂里存在也会被实例化出来，就是这个方法在起作用，非常重要
 				instanceCandidate = descriptor.resolveCandidate(autowiredBeanName, type, this);
 			}
 			Object result = instanceCandidate;

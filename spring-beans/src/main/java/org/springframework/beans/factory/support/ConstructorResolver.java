@@ -128,11 +128,15 @@ class ConstructorResolver {
 		// 就是说外面的BeanWrapper接口其实就是BeanWrapperImpl
 		BeanWrapperImpl bw = new BeanWrapperImpl();
 		this.beanFactory.initBeanWrapper(bw);
-		//这个变量将会决定最终一个bean使用哪种构造方法实例化的
+		//这个变量将会决定最终一个bean使用哪种构造方法实例化的，
+		// 一旦找到一个合适的就会把这个合适的构造方法赋值给constructorToUse，
+		// 然后使用这个对象的内容去new一个bean
 		Constructor<?> constructorToUse = null;
-		//构造方法需要的参数
+		//构造方法中参数的值。
+		// 由于使用构造方法，因此一定是通过反射来实例一个对象，在调用反射示例的时候，需要传入具体的值
+		// 这个变量就是用来记录这些值得。但是argsHolderToUse是一个数据解构，真正存放内容的是里面的一个属性arguments
 		ArgumentsHolder argsHolderToUse = null;
-		//存放参数值
+		//存放参数值，最终上面说的属性arguments会进行一个赋值操作argsToUse[]=arguments
 		Object[] argsToUse = null;
 
 		//确定参数值列表
@@ -1015,7 +1019,7 @@ class ConstructorResolver {
 	private static class ArgumentsHolder {
 
 		public final Object[] rawArguments;
-
+		//真实的值在这里面存着
 		public final Object[] arguments;
 
 		public final Object[] preparedArguments;

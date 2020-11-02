@@ -199,7 +199,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 
 	@Override
 	public Object getBean(String name) throws BeansException {
-		//DefaultListableBeanFactory来的，进入这个
+		//DefaultListableBeanFactory来的，进入这个。2.处理引用的时候会再次进入这里
 		return doGetBean(name, null, null, false);
 	}
 
