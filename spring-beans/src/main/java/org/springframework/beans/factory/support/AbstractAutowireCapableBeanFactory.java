@@ -558,7 +558,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			throws BeanCreationException {
 
 		// Instantiate the bean.
-		// BeanWrapper就是对真是类的一个包装，把真实类的方法，属性等等一切信息包装成为一个类BeanWrapper，
+		// BeanWrapper就是对真实bean类的一个包装，把真实类的方法，属性等等一切信息包装成为一个类BeanWrapper，
 		// 为了给后面方便使用
 		BeanWrapper instanceWrapper = null;
 		if (mbd.isSingleton()) {

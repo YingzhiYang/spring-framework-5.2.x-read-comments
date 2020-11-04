@@ -257,7 +257,7 @@ public abstract class AbstractBeanFactory extends FactoryBeanRegistrySupport imp
 		/**
 		 * 这个方法在初始化的时候会调用，在getBean的时候也会调用，为什么要这么做去拿到实例？
 		 * 	就是说Spring在初始化的时候先获取这个对象，判断这个对象是不是被初始化好了(一般情况下绝对为null)。
-		 * 	从Spring的bean容器中获取一个备案，由于Spring中bean容器时一个单例Map，
+		 * 	从Spring的bean容器中获取一个使用，由于Spring中bean容器时一个单例Map(单例对象池)，
 		 * 	所以可以理解为getSingleton(beanName) 等同于 beanMap.get(beanName)。
 		 * 由于方法会在Spring环境初始化的时候调用，也就是对象被创建的时候调用一次。
 		 * 	然后还要再getBean的时候在调用一次，所以在调试的时候要注意不能直接断点在这里
