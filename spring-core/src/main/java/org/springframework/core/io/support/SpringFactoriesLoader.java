@@ -117,26 +117,38 @@ public final class SpringFactoriesLoader {
 	 * @throws IllegalArgumentException if an error occurs while loading factory names
 	 * @see #loadFactories
 	 */
+	//这里的注释是SpringBoot的
 	public static List<String> loadFactoryNames(Class<?> factoryType, @Nullable ClassLoader classLoader) {
-		String factoryTypeName = factoryType.getName();
+		String factoryTypeName = factoryType.getName(); //此时拿到的名字是org.springframework.context.ApplicationContextInitializer
+		//这行是方法里面套方法，先要看loadSpringFactories(classLoader)，这个方法返回的是一个map，里面存了从文件里面加载出来的类
+		//  既然是返回的map，那么后面getOrDefault()方法就是从里面找到ApplicationContextInitializer对应的所有的值。
+		//  因为可能有多个项目，会有多个值。最终把所有和ApplicationContextInitializer有关的类名都会拿出来，并作为一个List<String>返回出去
 		return loadSpringFactories(classLoader).getOrDefault(factoryTypeName, Collections.emptyList());
 	}
-
+	//这里的注释是SpringBoot的
 	private static Map<String, List<String>> loadSpringFactories(@Nullable ClassLoader classLoader) {
+		//首先从缓存当中拿classLoader
 		MultiValueMap<String, String> result = cache.get(classLoader);
-		if (result != null) {
+		if (result != null) { //如果缓存中有这个classLoader就直接返回出去
 			return result;
 		}
 
+		//如果没有继续去找classLoader
 		try {
+			//首先尝试去拿到打包以后的文件s，FACTORIES_RESOURCE_LOCATION = "META-INF/spring.factories"
+			//	这里就是要拿出来项目打包后生成的文件spring.factories，但是由于可能有多个项目被引入到当前项目中来，
+			// 	因此这个文件可能是多个的
 			Enumeration<URL> urls = (classLoader != null ?
 					classLoader.getResources(FACTORIES_RESOURCE_LOCATION) :
 					ClassLoader.getSystemResources(FACTORIES_RESOURCE_LOCATION));
 			result = new LinkedMultiValueMap<>();
+			//循环urls，并且把这些spring.factories文件全部变成为Properties对象。
+			// 	可以直接搜索spring.factories就可以把这些文件搜出来，基本上就是<key,value>的格式存的类名
 			while (urls.hasMoreElements()) {
 				URL url = urls.nextElement();
 				UrlResource resource = new UrlResource(url);
 				Properties properties = PropertiesLoaderUtils.loadProperties(resource);
+				//循环properties对象，把所有的value拿到，并添加到result中返回出去
 				for (Map.Entry<?, ?> entry : properties.entrySet()) {
 					String factoryTypeName = ((String) entry.getKey()).trim();
 					for (String factoryImplementationName : StringUtils.commaDelimitedListToStringArray((String) entry.getValue())) {
@@ -144,7 +156,9 @@ public final class SpringFactoriesLoader {
 					}
 				}
 			}
+			//把result添加到缓存中
 			cache.put(classLoader, result);
+			//返回出去，注意这个result是一个map
 			return result;
 		}
 		catch (IOException ex) {

@@ -172,7 +172,7 @@ public abstract class AbstractApplicationEventMulticaster
 	 */
 	protected Collection<ApplicationListener<?>> getApplicationListeners(
 			ApplicationEvent event, ResolvableType eventType) {
-
+		//这里将会调用方法去找到是否有listener对传进来的东西感兴趣
 		Object source = event.getSource();
 		Class<?> sourceType = (source != null ? source.getClass() : null);
 		ListenerCacheKey cacheKey = new ListenerCacheKey(eventType, sourceType);
@@ -193,6 +193,7 @@ public abstract class AbstractApplicationEventMulticaster
 					return retriever.getApplicationListeners();
 				}
 				retriever = new ListenerRetriever(true);
+				//最终将会使用这个方法去返回是否有对传递进来的事件event或者source感兴趣
 				Collection<ApplicationListener<?>> listeners =
 						retrieveApplicationListeners(eventType, sourceType, retriever);
 				this.retrieverCache.put(cacheKey, retriever);
@@ -201,6 +202,7 @@ public abstract class AbstractApplicationEventMulticaster
 		}
 		else {
 			// No ListenerRetriever caching -> no synchronization necessary
+			//最终将会使用这个方法去返回是否有对传递进来的事件event或者source感兴趣
 			return retrieveApplicationListeners(eventType, sourceType, null);
 		}
 	}
@@ -225,7 +227,10 @@ public abstract class AbstractApplicationEventMulticaster
 
 		// Add programmatically registered listeners, including ones coming
 		// from ApplicationListenerDetector (singleton beans and inner beans).
+		//循环遍历listeners查看是否有感兴趣的监听器，如何判断呢，就是用GenericApplicationListener里面的两个方法去判断
 		for (ApplicationListener<?> listener : listeners) {
+			//这个方法就是用来判断当前监听器对当前的事件是否感兴趣，可以看到这是一个for循环，也就是说所有的监听器都会对同
+			// 一个事件进行过滤，知道发现一个合适的。
 			if (supportsEvent(listener, eventType, sourceType)) {
 				if (retriever != null) {
 					retriever.applicationListeners.add(listener);
@@ -347,9 +352,11 @@ public abstract class AbstractApplicationEventMulticaster
 	 */
 	protected boolean supportsEvent(
 			ApplicationListener<?> listener, ResolvableType eventType, @Nullable Class<?> sourceType) {
-
+		//判断当前listener是不是GenericApplicationListener，如果是就直接用，如果不是就转换成GenericApplicationListenerAdapter再用
 		GenericApplicationListener smartListener = (listener instanceof GenericApplicationListener ?
 				(GenericApplicationListener) listener : new GenericApplicationListenerAdapter(listener));
+		//最后根据GenericApplicationListener中的supportsEventType()方法和supportsSourceType()方法中的逻辑判断是否感兴趣
+		//  如果感兴趣，返回true，如果不感兴趣，返回false
 		return (smartListener.supportsEventType(eventType) && smartListener.supportsSourceType(sourceType));
 	}
 
