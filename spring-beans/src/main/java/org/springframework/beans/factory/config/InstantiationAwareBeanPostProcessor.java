@@ -72,6 +72,10 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 */
 	@Nullable
 	default Object postProcessBeforeInstantiation(Class<?> beanClass, String beanName) throws BeansException {
+		//该方法是指这个对象要不要在Spring生成之前要不要做特殊的处理，比如我需要自己生成这个bean的代理对象而不需要Spring去
+		// 产生这个bean的时候就可以使用这个方法。
+		// 就可以直接生成一个需要的bean返回给Spring容器，Spring会接受这个bean并放到单例对象池里。
+		// 但是要注意，一旦返回有值，后续的所有生成bean的逻辑都不会执行，只有postProcessAfterInitialization()会执行。
 		return null;
 	}
 
@@ -91,6 +95,11 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	 * @see #postProcessBeforeInstantiation
 	 */
 	default boolean postProcessAfterInstantiation(Object bean, String beanName) throws BeansException {
+		//此方法返回一个boolean值，表示当前对象bean还要不要完成属性填充。就是上面传进来的的bean和beanName
+		// 或者是否还完成属性的修改。比如某个属性上有@Autowired，但是实现了这个方法并返回了false，那么这个属性就不会被Spring
+		// 自动填充上。如果返回true就会被Spring接管并自动装填。但是要注意，这一切都是在上面的before方法返回null的情况下考虑的，
+		// 如果上面的方法返回了一个实例好的bean，这个方法根本不会被执行到。
+		// 但是如果此方法返回了false，那么下面的postProcessProperties()就不会执行到
 		return true;
 	}
 
@@ -115,7 +124,7 @@ public interface InstantiationAwareBeanPostProcessor extends BeanPostProcessor {
 	@Nullable
 	default PropertyValues postProcessProperties(PropertyValues pvs, Object bean, String beanName)
 			throws BeansException {
-
+		//这个方法是为了完成当前bean中所有属性的注入，也就是填充属性。上面的方法是判断要不要填充，这个方法才是真正填充的地方。
 		return null;
 	}
 
