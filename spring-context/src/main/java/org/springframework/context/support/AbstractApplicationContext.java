@@ -536,7 +536,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				postProcessBeanFactory(beanFactory);
 
 				// Invoke factory processors registered as beans in the context.
-				//在Spring的环境中去执行已经被注册的factory processors
+				//在Spring的环境中去执行已经被注册的factory bean post processors后置处理器
 				// 设置执行自定义的ProcessorBeanFactory
 				invokeBeanFactoryPostProcessors(beanFactory);
 
@@ -552,7 +552,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				initMessageSource();
 
 				// Initialize event multicaster for this context.
-				// spring的event事件
+				// spring的event事件，初始化应用事件广播器
 				initApplicationEventMulticaster();
 
 				// Initialize other special beans in specific context subclasses.
@@ -566,6 +566,7 @@ public abstract class AbstractApplicationContext extends DefaultResourceLoader
 				// Instantiate all remaining (non-lazy-init) singletons.
 				//在此之前，我们的类并没有进行实例化，上面的内容是把所有的bean变成BeanDefinition然后放到到BeanDefinitionMap中，
 				// 其中有些BeanPostProcessor被提前拿出来进行初始化为了进一步操作。其余的内容仍然没有初始化。
+				// 这些剩下的内容一般特指我们自己创建的service，controller，dao等等这些bean
 				finishBeanFactoryInitialization(beanFactory);
 
 				// Last step: publish corresponding event.

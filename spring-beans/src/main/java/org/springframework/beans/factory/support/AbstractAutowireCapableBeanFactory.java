@@ -39,7 +39,6 @@ import java.util.function.Supplier;
 
 import org.apache.commons.logging.Log;
 
-import org.springframework.aop.framework.autoproxy.AbstractAutoProxyCreator;
 import org.springframework.beans.BeanUtils;
 import org.springframework.beans.BeanWrapper;
 import org.springframework.beans.BeanWrapperImpl;
@@ -274,7 +273,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	 * <p>By default, only the BeanFactoryAware interface is ignored.
 	 * For further types to ignore, invoke this method for each type.
 	 * @see org.springframework.beans.factory.BeanFactoryAware
-	 * @see org.springframework.context.ApplicationContextAware
+	 * @see //org.springframework.context.ApplicationContextAware
 	 */
 	public void ignoreDependencyInterface(Class<?> ifc) {
 		this.ignoredDependencyInterfaces.add(ifc);
@@ -510,9 +509,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			// Give BeanPostProcessors a chance to return a proxy instead of the target bean instance.
 			// 在bean初始化之前应用后置处理器，如果后置处理器返回的不是null，直接返回
 			// 这里使用的是InstantiationAwareBeanPostProcessors处理器，这个处理器一旦实现，就会使得这个对象直接被Spring拿到
-			// 而脱离了Spring做的其他操作，比如也不需要由Spring管理依赖等等。Spring并不提倡大家使用这个处理器。
+			// 而脱离了Spring做的其他操作，比如也不需要由Spring管理依赖等等。Spring并不提倡大家使用这个处理器，而交给Spring管理。
+			// 值得说的是这个地方是第一次调用后置处理器的地方InstantiationAwareBeanPostProcessor。
 			Object bean = resolveBeforeInstantiation(beanName, mbdToUse);
 			if (bean != null) {
+				//上面的方法如果里面的后置处理器InstantiationAwareBeanPostProcessor返回了一个值
+				// 后续的逻辑就不会再走了
 				return bean;
 			}
 		}
@@ -523,6 +525,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 
 		try {
 			//doCreateBean从名字看，这里就是创建bean的地方，那么代理应该也是在这里被创建的，进入
+			// 在这里会第二次执行后置处理器
 			Object beanInstance = doCreateBean(beanName, mbdToUse, args);
 			if (logger.isTraceEnabled()) {
 				logger.trace("Finished creating instance of bean '" + beanName + "'");
@@ -573,6 +576,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			 * 	3. 通过无参构造方法创建bean实例
 			 * 	如果bean的配置信息中配置了loopup-method和replace-method则会代理增强bean实例。
 			 */
+			//在这里第二次执行后置处理器
 			instanceWrapper = createBeanInstance(beanName, mbd, args);
 		}
 		//getWrappedInstance()是为了拿到原始对象的，也就是说bean就是原始对象了，那么下面就应该是创建代理了
@@ -586,7 +590,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		synchronized (mbd.postProcessingLock) {
 			if (!mbd.postProcessed) {
 				try {
-					//后置处理器，用户合并bean
+					//后置处理器，用户合并bean，第三次执行后置处理器
 					applyMergedBeanDefinitionPostProcessors(mbd, beanType, beanName);
 				}
 				catch (Throwable ex) {
@@ -606,7 +610,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 				logger.trace("Eagerly caching bean '" + beanName +
 						"' to allow for resolving potential circular references");
 			}
-			//重点方法把new出来的bean，放到map中
+			//重点方法把new出来的bean，放到map中，此时执行了第四次后置处理器
 			addSingletonFactory(beanName, () -> getEarlyBeanReference(beanName, mbd, bean));
 		}
 
@@ -614,10 +618,11 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// 传递原生对象给exposedObject
 		Object exposedObject = bean;
 		try {
-			//赋值属性的，如果有依赖，就是在这里处理的
+			//赋值属性的，如果有依赖，就是在这里处理的。第五次和第六次调用后置处理器
 			populateBean(beanName, mbd, instanceWrapper);
 			//这句话跑完以后，原始对象被替换为代理对象，进入这个方法看看是怎么做的
 			// 也是执行后置处理器的地方，AOP就是在这里完成的处理
+			// 这里面将会执行第七次和第八次后置处理器
 			exposedObject = initializeBean(beanName, exposedObject, mbd);
 		}
 		catch (Throwable ex) {
@@ -1137,8 +1142,12 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 				Class<?> targetType = determineTargetType(beanName, mbd);
 				if (targetType != null) {
+					//可以进入这个方法看到里面的过程就是在用循环过滤InstantiationAwareBeanPostProcessor的before方法
+					// 其实这里会一直为null，如果真的返回了一个值的话，凡是涉及到bean的地方都是直接返回，后续逻辑就不会再在走了
 					bean = applyBeanPostProcessorsBeforeInstantiation(targetType, beanName);
 					if (bean != null) {
+						//如果bean不是null，就会执行所有已经初始化的后的后置处理器的after，因为一旦可以拿出来一个bean，那么就
+						// 说明这个bean已经被实例化出来了，只有after需要执行
 						bean = applyBeanPostProcessorsAfterInitialization(bean, beanName);
 					}
 				}
@@ -1162,6 +1171,8 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 	@Nullable
 	protected Object applyBeanPostProcessorsBeforeInstantiation(Class<?> beanClass, String beanName) {
 		for (BeanPostProcessor bp : getBeanPostProcessors()) {
+			//循环所有的后置处理器，直到找到InstantiationAwareBeanPostProcessor的postProcessBeforeInstantiation()方法
+			// 一般情况下InstantiationAwareBeanPostProcessor的都是null
 			if (bp instanceof InstantiationAwareBeanPostProcessor) {
 				InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 				Object result = ibp.postProcessBeforeInstantiation(beanClass, beanName);
@@ -1251,6 +1262,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		 * AUTOWIRE_BY_TYPE和AUTOWIRE_BY_NAME只是和Setter的名字有关系，和属性无关。其实这两个也是通过类型和名字装配，但是他们都是通过Setter方法去装配。
 		 *
 		 */
+		//在这里第二次执行后置处理器
 		Constructor<?>[] ctors = determineConstructorsFromBeanPostProcessors(beanClass, beanName);
 		if (ctors != null || mbd.getResolvedAutowireMode() == AUTOWIRE_CONSTRUCTOR ||
 				mbd.hasConstructorArgumentValues() || !ObjectUtils.isEmpty(args)) {
@@ -1443,6 +1455,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		// to support styles of field injection.
 		// 这里的代码是说如果用户使用了InstantiationAwareBeanPostProcessor这个后置处理器，并且返回了一个bean，
 		// 那么Spring就认为用户已经对这个bean进行了处理，而不需要Spring帮助设置，因此直接就返回了，一般很少有人做这个事情。
+		// 这里是第五次执行的后置处理器
 		if (!mbd.isSynthetic() && hasInstantiationAwareBeanPostProcessors()) {
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
@@ -1481,6 +1494,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 			}
 			for (BeanPostProcessor bp : getBeanPostProcessors()) {
 				if (bp instanceof InstantiationAwareBeanPostProcessor) {
+					//第六次执行的后置处理器
 					InstantiationAwareBeanPostProcessor ibp = (InstantiationAwareBeanPostProcessor) bp;
 					//这里使用的是AutowiredAnnotationBeanPostProcessor的方法postProcessProperties()处理赋值操作的。
 					PropertyValues pvsToUse = ibp.postProcessProperties(pvs, bw.getWrappedInstance(), beanName);
@@ -1851,6 +1865,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (mbd == null || !mbd.isSynthetic()) {
 			//从名字看这里是执行BeanPostProcessorsBeforeInitialization方法，做了一些准备
 			// 就是BeanPostProcessors接口的两个方法之一：before
+			//这里执行第七次后置处理器
 			wrappedBean = applyBeanPostProcessorsBeforeInitialization(wrappedBean, beanName);
 		}
 
@@ -1866,6 +1881,7 @@ public abstract class AbstractAutowireCapableBeanFactory extends AbstractBeanFac
 		if (mbd == null || !mbd.isSynthetic()) {
 			//从名字看这里是执行BeanPostProcessorsBeforeInitialization方法，
 			// 就是BeanPostProcessors接口的两个方法之一：after。但是这里运行以后，就变成代理了
+			//这里执行第八次后置处理器
 			wrappedBean = applyBeanPostProcessorsAfterInitialization(wrappedBean, beanName);
 		}
 
